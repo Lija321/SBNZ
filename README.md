@@ -377,29 +377,26 @@ Sistem ne računa konačne pravne rokove, već označava datume koje korisnik tr
 | Damage date needs check | postoji datum nastanka štete | `ImportantDateNeedsCheck(DAMAGE_DATE)` + `SuggestedTask(VERIFY_DAMAGE_DATE)` |
 | Old case activity | poslednja radnja starija od praga | `CaseInactive(days=X)` + `SuggestedTask(CHECK_CASE_STATUS)` |
 
-### 5.8 Backward-chaining upiti
+### 5.8 Backward-chaining (Ciljno-orijentisano rezonovanje)
+Umesto pukog iščitavanja stanja, sistem koristi rekurzivne upite (```Queries```) za dinamičku derivaciju kompleksnih hipoteza na zahtev korisnika. Backward chaining se koristi za dokazivanje „procesne validnosti” predmeta kroz proveru hijerarhije podciljeva. Zaključak se ne čuva statički, već se izvodi u realnom vremenu pretraživanjem stabla činjenica.
 
-Backward chaining se koristi za ciljna pitanja koja korisnik može da postavi sistemu.
-
-| Upit | Svrha |
+| Upit (Cilj) | Opis rekurzivnog dokazivanja|
 |---|---|
-| `isCaseReadyForInitialReview(caseId)` | proverava da li je predmet spreman za inicijalni pregled |
-| `whatIsMissingForReview(caseId)` | vraća šta nedostaje da bi predmet bio spreman |
-| `hasBlockingTasks(caseId)` | proverava da li postoje otvoreni zadaci koji blokiraju pregled |
+| isCaseProcessable(caseId) | Korenski cilj: Uspešan je samo ako su svi podciljevi (identity, evidence, representation) istiniti. |
+| isIdentityVerified(caseId) | Podcilj 1: Unazad proverava da li dokumentacija odgovara tipu stranke (npr. JMBG za fizička lica vs. PIB za pravna). |
+| isEvidenceChainComplete(caseId) | Podcilj 2: Na osnovu klasifikacije, rekurzivno proverava postojanje korenskog dokaza (npr. Ugovor za dug, Zapisnik za štetu). |
+| isRepresentationResolved(caseId) | Podcilj 3: Proverava da li stranka zastupa sebe ili postoji validno punomoćje u dokumentaciji. |
 
-Primer ciljnog pitanja:
+**Primer rekurzivne logike:**
 
-```text
-Da li je predmet spreman za inicijalni pregled?
-```
+Da bi sistem odgovorio na pitanje „Da li je predmet spreman za postupak?”, on ne gleda u polje status, već pokreće sledeći lanac dokazivanja:
 
-Sistem proverava:
+1. Da bi predmet bio **procesibilan**, mora biti **verifikovan identitet**.
+2. Da bi **identitet** bio verifikovan, sistem unazad traži tip stranke:
+	- Ako je fizičko lice -> traži se ID_CARD.
+	- Ako je pravno lice -> traži se REGISTRATION_EXTRACT.
 
-- da li su osnovni podaci kompletni;
-- da li je predmet klasifikovan;
-- da li nema nedostajućih obaveznih dokumenata;
-- da li nema otvorenih blokirajućih zadataka;
-- da li su važni datumi označeni za proveru.
+3. Zatim se prelazi na sledeći podcilj (dokazni lanac) i tako do kraja stabla.
 
 ### 5.9 Sažetak ulančavanja kroz nivoe
 
