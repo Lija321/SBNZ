@@ -11,7 +11,7 @@ import com.sbnz.legal.domain.enums.DocumentType;
 import com.sbnz.legal.domain.enums.PartyRole;
 import com.sbnz.legal.domain.enums.PartyType;
 import com.sbnz.legal.domain.enums.TaskType;
-import org.drools.template.ObjectDataCompiler;
+import org.drools.decisiontable.ExternalSpreadsheetCompiler;
 import org.junit.jupiter.api.Test;
 import org.kie.api.io.ResourceType;
 import org.kie.api.runtime.KieSession;
@@ -25,16 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that the {@code document_checklist_template.drt} rule template compiles to valid DRL
- * straight from {@link ChecklistEntry} objects (scalar columns only) and behaves correctly:
- * the optional {@code Party(...)} line is dropped for {@link PartyType#ANY} entries, and the
- * required/expected branch selects the right fact type.
+ * straight from the {@code document_checklist_data.xlsx} spreadsheet (the editable, externalized
+ * data source — no Java rows involved) and behaves correctly: the optional {@code Party(...)}
+ * line is dropped for {@code ANY} party-type rows, and the required/expected branch selects the
+ * right fact type.
  */
 class DocumentChecklistTemplateTest {
 
     private String compileRules() {
         InputStream template = getClass().getResourceAsStream("/rules/document_checklist_template.drt");
+        InputStream data = getClass().getResourceAsStream("/rules/document_checklist_data.xlsx");
         assertNotNull(template, "template must be on the test classpath");
-        return new ObjectDataCompiler().compile(new DocumentChecklistRegistry().getEntries(), template);
+        assertNotNull(data, "spreadsheet data source must be on the test classpath");
+        return new ExternalSpreadsheetCompiler().compile(data, template, 3, 2);
     }
 
     private KieSession sessionFor(String drl) {

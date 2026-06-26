@@ -155,18 +155,18 @@ Baza znanja je organizovana kroz:
 - `accumulate` pravila za zbirne pokazatelje i opterećenje kancelarije (`accumulate_rules.drl`),
 - pravila za označavanje važnih datuma (`date_rules.drl`),
 - CEP pravila za neaktivnost i dopunu dokumentacije (`cep_rules.drl`),
-- templejt za generisanje pravila o dokumentaciji, koji se kompajlira u memoriji pri pokretanju aplikacije (`document_checklist_template.drt`),
+- templejt za generisanje pravila o dokumentaciji, koji se kompajlira u memoriji pri pokretanju aplikacije iz spreadsheet izvora podataka (`document_checklist_template.drt` + `document_checklist_data.xlsx`),
 - forward pravila koja pozivaju backward-chaining upit radi procene glavne pravne radnje (`procedure_rules.drl`),
 - backward-chaining upite za spremnost predmeta i graf procesnih preduslova (`queries.drl`).
 
 Instanciranje templejt pravila:
 
 - Templejt fajl definiše šablon pravila sa promenljivim poljima: `caseType`, `partyType`, `documentType`, `required`, `taskIfMissing`.
-- Osnovna dimenzija konfiguracije je `caseType`, ali pojedina pravila mogu dodatno zavisiti od tipa stranke (`partyType`).
-- Za dokumente koji su očekivani bez obzira na tip stranke koristi se vrednost `ANY`.
-- Prilikom pokretanja aplikacije, sistem prolazi kroz konfiguraciju dokumenata za svaki tip predmeta.
+- Konkretne vrednosti tih polja **ne nalaze se u Java kodu**, već u spreadsheet fajlu `document_checklist_data.xlsx` (jedan red = jedna kombinacija tipa predmeta, tipa stranke i dokumenta) — to je tabelarni, van-aplikacioni izvor podataka koji rule template po definiciji treba da koristi.
+- Konekcija između templejta i spreadsheet-a se ostvaruje pri pokretanju aplikacije putem `ExternalSpreadsheetCompiler` klase (`DroolsConfig`), koja podatke iz `.xlsx` fajla kompajluje u konkretna DRL pravila — analogno `customer-classification-simple.drt` primeru sa vežbi.
+- Templejt koristi MVEL `@if`/`@else`/`@end` konstrukcije za **uslovno generisanje pravila** na osnovu vrednosti u podacima: red sa `partyType = ANY` generiše pravilo bez `Party(...)` uslova, a vrednost `required` (TRUE/FALSE) bira da li se ubacuje `MissingRequiredDocument` ili `MissingExpectedDocument`.
 - Za svaku kombinaciju tipa predmeta, tipa stranke i dokumenta generiše se konkretno DRL pravilo.
-- Na taj način se dobija veći broj sličnih pravila bez ručnog pisanja svakog pojedinačno.
+- Izmena ili dodavanje novog reda u checklist konfiguraciji (npr. novi obavezni dokument za neki tip predmeta) se radi izmenom `.xlsx` fajla, bez izmene Java koda i bez ponovnog pisanja DRL pravila.
 
 Popunjavanje znanja:
 
@@ -512,7 +512,7 @@ Zaključak:
 
 Kompleksnost:
 
-- isto pravilo se ne piše ručno za svaki dokument, već se generiše iz templejta na osnovu tipa predmeta, tipa stranke i konfiguracije dokumenata.
+- isto pravilo se ne piše ručno za svaki dokument, već se generiše iz templejta na osnovu reda u `document_checklist_data.xlsx` (tip predmeta, tip stranke, dokument) — dodavanje novog reda u tom fajlu dodaje novo pravilo bez izmene Java koda.
 
 ### Primer 2 – Accumulate pravilo za status dokumentacije
 

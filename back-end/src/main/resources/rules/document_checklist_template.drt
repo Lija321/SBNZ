@@ -1,8 +1,8 @@
 template header
 caseType
-partyConstraint
+partyType
 documentType
-missingFactType
+required
 taskIfMissing
 
 package rules;
@@ -22,17 +22,27 @@ dialect "java"
 
 template "document-checklist"
 
-rule "@{caseType}_missing_@{documentType}_@{row.rowNumber}" 
+rule "@{caseType}_missing_@{documentType}_@{row.rowNumber}"
 salience 40
 when
-    $cc : CaseClassification($id : caseId, caseType == CaseType.@{caseType}) 
-    Party(caseId == $id, partyType == PartyType.@{partyConstraint}) 
-    not Document(caseId == $id, documentType == DocumentType.@{documentType}, present == true) 
-    not @{missingFactType}(caseId == $id, documentType == DocumentType.@{documentType}) 
-    not SuggestedTask(caseId == $id, taskType == TaskType.@{taskIfMissing}, open == true) 
+    $cc : CaseClassification($id : caseId, caseType == CaseType.@{caseType})
+@if{partyType != "ANY"}
+    Party(caseId == $id, partyType == PartyType.@{partyType})
+@end{}
+    not Document(caseId == $id, documentType == DocumentType.@{documentType}, present == true)
+@if{required == "TRUE"}
+    not MissingRequiredDocument(caseId == $id, documentType == DocumentType.@{documentType})
+@else{}
+    not MissingExpectedDocument(caseId == $id, documentType == DocumentType.@{documentType})
+@end{}
+    not SuggestedTask(caseId == $id, taskType == TaskType.@{taskIfMissing}, open == true)
 then
-    insert(new @{missingFactType}($id, DocumentType.@{documentType})); 
-    insert(new SuggestedTask($id, TaskType.@{taskIfMissing})); 
+@if{required == "TRUE"}
+    insert(new MissingRequiredDocument($id, DocumentType.@{documentType}));
+@else{}
+    insert(new MissingExpectedDocument($id, DocumentType.@{documentType}));
+@end{}
+    insert(new SuggestedTask($id, TaskType.@{taskIfMissing}));
 end
 
 end template

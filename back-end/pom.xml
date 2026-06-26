@@ -30,6 +30,11 @@
         </dependency>
         <dependency>
             <groupId>org.drools</groupId>
+            <artifactId>drools-decisiontables</artifactId>
+            <version>10.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.drools</groupId>
             <artifactId>drools-mvel</artifactId>
             <version>10.1.0</version>
         </dependency>

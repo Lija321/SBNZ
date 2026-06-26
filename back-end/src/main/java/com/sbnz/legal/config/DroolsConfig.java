@@ -1,6 +1,6 @@
 package com.sbnz.legal.config;
 
-import org.drools.template.ObjectDataCompiler;
+import org.drools.decisiontable.ExternalSpreadsheetCompiler;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
@@ -30,10 +30,13 @@ public class DroolsConfig {
     private static final String PROCEDURE_RULES = "rules/procedure_rules.drl";
     private static final String QUERIES = "rules/queries.drl";
     private static final String DOCUMENT_TEMPLATE_PATH = "rules/document_checklist_template.drt";
+    private static final String DOCUMENT_TEMPLATE_DATA_PATH = "rules/document_checklist_data.xlsx";
+    private static final int DOCUMENT_DATA_FIRST_ROW = 3;
+    private static final int DOCUMENT_DATA_FIRST_COLUMN = 2;
     private static final String GENERATED_DOCUMENT_KFS_PATH = "src/main/resources/rules/generated_document_rules.drl";
 
     @Bean
-    public KieContainer kieContainer(DocumentChecklistRegistry checklistRegistry) {
+    public KieContainer kieContainer() {
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();
 
@@ -50,7 +53,7 @@ public class DroolsConfig {
         kfs.writeKModuleXML(module.toXML());
         kfs.write(ks.getResources().newClassPathResource(VALIDATION_RULES));
         kfs.write(ks.getResources().newClassPathResource(CLASSIFICATION_RULES));
-        writeGeneratedDocumentRules(ks, kfs, checklistRegistry);
+        writeGeneratedDocumentRules(ks, kfs);
         kfs.write(ks.getResources().newClassPathResource(ACCUMULATE_RULES));
         kfs.write(ks.getResources().newClassPathResource(DATE_RULES));
         kfs.write(ks.getResources().newClassPathResource(CEP_RULES));
@@ -66,12 +69,17 @@ public class DroolsConfig {
         return ks.newKieContainer(ks.getRepository().getDefaultReleaseId());
     }
 
-    private void writeGeneratedDocumentRules(KieServices ks, KieFileSystem kfs, DocumentChecklistRegistry registry) {
+    private void writeGeneratedDocumentRules(KieServices ks, KieFileSystem kfs) {
         InputStream templateStream = getClass().getResourceAsStream("/" + DOCUMENT_TEMPLATE_PATH);
+        InputStream dataStream = getClass().getResourceAsStream("/" + DOCUMENT_TEMPLATE_DATA_PATH);
         if (templateStream == null) {
             throw new IllegalStateException("Missing rule template on classpath: " + DOCUMENT_TEMPLATE_PATH);
         }
-        String drl = new ObjectDataCompiler().compile(registry.getEntries(), templateStream);
+        if (dataStream == null) {
+            throw new IllegalStateException("Missing rule template data source on classpath: " + DOCUMENT_TEMPLATE_DATA_PATH);
+        }
+        String drl = new ExternalSpreadsheetCompiler()
+                .compile(dataStream, templateStream, DOCUMENT_DATA_FIRST_ROW, DOCUMENT_DATA_FIRST_COLUMN);
         kfs.write(
                 ks.getResources()
                         .newByteArrayResource(drl.getBytes(StandardCharsets.UTF_8))

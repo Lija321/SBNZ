@@ -14,7 +14,7 @@ class KieBaseBuildTest {
 
     @Test
     void fullKnowledgeBaseBuildsAndOpensSession() {
-        KieContainer container = new DroolsConfig().kieContainer(new DocumentChecklistRegistry());
+        KieContainer container = new DroolsConfig().kieContainer();
         assertNotNull(container);
         KieSession session = container.newKieSession();
         try {
