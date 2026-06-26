@@ -1,0 +1,228 @@
+@if (report(); as r) {
+  <section class="results">
+    <h2>Rezultat procene</h2>
+
+    <div class="overview-card">
+      <div class="overview-main">
+        <span class="overview-label">Status (L5)</span>
+        <span class="status-badge" [class]="statusTone(r.summary?.status)">
+          {{ labelStatus(r.summary?.status) }}
+        </span>
+      </div>
+      <div class="overview-grid">
+        @if (r.classification || r.summary?.classification) {
+          <div class="overview-item">
+            <span class="overview-label">Klasifikacija (L2)</span>
+            <span class="overview-value">
+              {{ labelCaseType(r.classification?.caseType ?? r.summary!.classification!) }}
+              @if (r.classification?.confidence) {
+                <span class="confidence">({{ r.classification?.confidence }})</span>
+              }
+            </span>
+          </div>
+        }
+        @if (r.summary?.documentation) {
+          <div class="overview-item">
+            <span class="overview-label">Dokumentacija (L3/L4)</span>
+            <span class="overview-value">{{ labelDocStatus(r.summary!.documentation!) }}</span>
+          </div>
+        }
+        @if (openTasks(r).length) {
+          <div class="overview-item">
+            <span class="overview-label">Otvoreni zadaci</span>
+            <span class="overview-value warn-count">{{ openTasks(r).length }}</span>
+          </div>
+        }
+        @if (r.mainActionGoal) {
+          <div class="overview-item">
+            <span class="overview-label">Glavna pravna radnja (BC)</span>
+            <span class="overview-value" [class.warn-count]="r.mainActionBlocked">
+              {{ labelProcedureStep(r.mainActionGoal) }}
+              @if (r.mainActionBlocked) {
+                — blokirana
+              } @else {
+                — moguća
+              }
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (showDemoHint(r)) {
+      <p class="demo-hint">
+        Demo CEP: u panelu ispod klikni <strong>+7 dana</strong>, zatim <strong>Ponovi procenu</strong> u zaglavlju.
+      </p>
+    }
+
+    @if (hasAttention(r)) {
+      <section class="result-section attention">
+        <h3>Za pažnju</h3>
+        @if (r.cepAlerts?.length) {
+          <div class="item-group">
+            <h4>CEP alarmi</h4>
+            <ul>
+              @for (a of r.cepAlerts; track a.alertType + a.raisedAt) {
+                <li>{{ labelCepAlert(a.alertType) }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.missingRequiredDocuments?.length) {
+          <div class="item-group">
+            <h4>Nedostaju obavezni dokumenti (L3)</h4>
+            <ul>
+              @for (d of r.missingRequiredDocuments; track d) {
+                <li>{{ labelDocument(d) }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.caseInactive) {
+          <div class="item-group">
+            <h4>Neaktivnost predmeta</h4>
+            <p>{{ r.caseInactive.daysSinceActivity }} dana bez aktivnosti</p>
+          </div>
+        }
+        @if (r.officeLoadWarnings?.length) {
+          <div class="item-group">
+            <h4>Opterećenje kancelarije (L4)</h4>
+            <ul>
+              @for (w of r.officeLoadWarnings; track w.type) {
+                <li>{{ labelOfficeLoad(w.type) }} ({{ w.caseCount }} predmeta)</li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+    }
+
+    @if (hasActions(r)) {
+      <section class="result-section">
+        <h3>Predložene akcije</h3>
+        @if (openTasks(r).length) {
+          <div class="item-group">
+            <h4>Zadaci</h4>
+            <ul class="task-list">
+              @for (t of openTasks(r); track t.taskType + t.createdAt) {
+                <li>
+                  <span class="task-pill">{{ labelTask(t.taskType) }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.importantDatesToCheck?.length) {
+          <div class="item-group">
+            <h4>Datumi za proveru</h4>
+            <ul>
+              @for (d of r.importantDatesToCheck; track d) {
+                <li>{{ labelDate(d) }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.missingFields?.length) {
+          <div class="item-group">
+            <h4>Nedostaju podaci (L1)</h4>
+            <ul>
+              @for (f of r.missingFields; track f) {
+                <li>{{ labelMissingField(f) }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.missingExpectedDocuments?.length) {
+          <div class="item-group">
+            <h4>Očekivani dokumenti — proveriti (L3)</h4>
+            <ul>
+              @for (d of r.missingExpectedDocuments; track d) {
+                <li>{{ labelDocument(d) }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+    }
+
+    <details class="result-details">
+      <summary>Detalji rezonovanja (L1–L5)</summary>
+      <div class="details-body">
+        @if (r.statusCandidates?.length) {
+          <div class="item-group">
+            <h4>Kandidati za status (L5)</h4>
+            <ul class="candidates">
+              @for (c of r.statusCandidates; track c.status + c.priority) {
+                <li>
+                  {{ labelStatus(c.status) }}
+                  <span class="priority">prioritet {{ c.priority }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (r.documents?.length) {
+          <div class="item-group">
+            <h4>Čeklista dokumentacije</h4>
+            <ul class="docs">
+              @for (d of r.documents; track d.documentType) {
+                <li [class.ok]="d.present" [class.miss]="!d.present">
+                  {{ labelDocument(d.documentType) }}
+                  {{ d.present ? '✓' : '✗' }}
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (!r.statusCandidates?.length && !r.documents?.length) {
+          <p class="muted">Nema dodatnih detalja.</p>
+        }
+      </div>
+    </details>
+
+    <details class="result-details">
+      <summary>Transparentnost (pravila i audit)</summary>
+      <div class="details-body">
+        @if (r.ruleFirings?.length) {
+          <div class="item-group">
+            <h4>Aktivirana pravila</h4>
+            <ul class="rules">
+              @for (rule of r.ruleFirings; track rule.ruleName + rule.firedAt) {
+                <li>{{ rule.ruleName }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (auditLog().length) {
+          <div class="item-group">
+            <h4>Audit log</h4>
+            <ul class="audit">
+              @for (entry of auditLog(); track entry.id) {
+                <li>
+                  <span class="audit-type">{{ labelAudit(entry.recordType) }}</span>
+                  @if (entry.ruleName) {
+                    <span>{{ entry.ruleName }}</span>
+                  }
+                  @if (entry.taskType) {
+                    <span>{{ labelTask(entry.taskType) }}</span>
+                  }
+                  @if (entry.previousStatus && entry.newStatus) {
+                    <span>{{ labelStatus(entry.previousStatus) }} → {{ labelStatus(entry.newStatus) }}</span>
+                  } @else if (entry.newStatus) {
+                    <span>{{ labelStatus(entry.newStatus) }}</span>
+                  }
+                  @if (entry.explanation) {
+                    <span class="audit-detail">{{ entry.explanation }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (!r.ruleFirings?.length && !auditLog().length) {
+          <p class="muted">Nema zapisa.</p>
+        }
+      </div>
+    </details>
+  </section>
+}

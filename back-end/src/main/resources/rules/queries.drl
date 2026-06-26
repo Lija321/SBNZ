@@ -1,0 +1,106 @@
+package rules;
+
+import com.sbnz.legal.domain.BasicDataStatus;
+import com.sbnz.legal.domain.CaseClassification;
+import com.sbnz.legal.domain.Document;
+import com.sbnz.legal.domain.MissingRequiredDocument;
+import com.sbnz.legal.domain.ProcedureGoal;
+import com.sbnz.legal.domain.StepRequiresDocument;
+import com.sbnz.legal.domain.StepRequiresStep;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.enums.BasicDataCompleteness;
+import com.sbnz.legal.domain.enums.DocumentType;
+import com.sbnz.legal.domain.enums.ProcedureStep;
+
+// ---------------------------------------------------------------------------
+// Flat queries — goal decomposition for "ready for initial review".
+// These simply read facts that forward rules already derived.
+// ---------------------------------------------------------------------------
+
+query isBasicDataComplete(String cid)
+    BasicDataStatus(caseId == cid, status == BasicDataCompleteness.COMPLETE)
+end
+
+query hasClassification(String cid)
+    CaseClassification(caseId == cid, caseType : caseType)
+end
+
+query missingRequiredDocuments(String cid)
+    MissingRequiredDocument(caseId == cid, documentType : documentType)
+end
+
+query openBlockingTasks(String cid)
+    SuggestedTask(caseId == cid, open == true, taskType : taskType)
+end
+
+query isCaseReadyForInitialReview(String cid)
+    BasicDataStatus(caseId == cid, status == BasicDataCompleteness.COMPLETE)
+    CaseClassification(caseId == cid)
+    not MissingRequiredDocument(caseId == cid)
+    not SuggestedTask(caseId == cid, open == true)
+end
+
+// ---------------------------------------------------------------------------
+// Backward chaining over the procedural prerequisite graph.
+//
+// A legal action (goal) depends on prerequisite steps, which in turn depend on
+// further steps and/or documents. The queries below recurse over that graph to
+// derive, from base facts (which documents are present), whether a goal can be
+// reached — true backward chaining, not a flat fact lookup.
+// ---------------------------------------------------------------------------
+
+/*
+ * isStepBlocked(cid, goal) holds when the goal cannot (yet) be performed, because:
+ *   - a document it directly requires is missing, OR
+ *   - one of its prerequisite steps is itself blocked (recursive).
+ * Recursion is positive (mirrors the classic isContainedIn closure); negation is
+ * only applied to the base Document fact, so reasoning is well-defined for the
+ * acyclic prerequisite graph.
+ */
+query isStepBlocked(String cid, ProcedureStep goal)
+    (
+        StepRequiresDocument(goal, $doc;)
+        and
+        not Document(caseId == cid, documentType == $doc, present == true)
+    )
+    or
+    (
+        StepRequiresStep(goal, $pre;)
+        and
+        isStepBlocked(cid, $pre;)
+    )
+end
+
+/*
+ * dependsOnStep(goal, dependency) is the transitive closure of step prerequisites.
+ * Called with `dependency` unbound it enumerates the whole prerequisite chain of a
+ * goal (open-variable backward chaining, like isContainedIn(thing, "Office"; )).
+ */
+query dependsOnStep(ProcedureStep goal, ProcedureStep dependency)
+    StepRequiresStep(goal, dependency;)
+    or
+    (
+        StepRequiresStep(goal, $mid;)
+        and
+        dependsOnStep($mid, dependency;)
+    )
+end
+
+/*
+ * missingDocumentForGoal(cid, goal, doc) derives, transitively over the prerequisite
+ * graph, every required document that is not present. Called with `doc` unbound it
+ * lists all blocking documents for a goal.
+ */
+query missingDocumentForGoal(String cid, ProcedureStep goal, DocumentType doc)
+    (
+        StepRequiresDocument(goal, doc;)
+        and
+        not Document(caseId == cid, documentType == doc, present == true)
+    )
+    or
+    (
+        StepRequiresStep(goal, $pre;)
+        and
+        missingDocumentForGoal(cid, $pre, doc;)
+    )
+end

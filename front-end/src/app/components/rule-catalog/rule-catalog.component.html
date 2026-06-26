@@ -1,0 +1,36 @@
+<button type="button" class="catalog-btn" (click)="show()">Katalog pravila</button>
+
+@if (open()) {
+  <div class="backdrop" (click)="hide()"></div>
+  <dialog class="catalog-dialog" open>
+    <header class="catalog-header">
+      <div>
+        <h2>Katalog pravila</h2>
+        <p class="hint">Pregled baze znanja po nivoima rezonovanja (README §5).</p>
+      </div>
+      <button type="button" (click)="hide()">Zatvori</button>
+    </header>
+
+    <div class="catalog-body">
+      @for (section of sections; track section.id) {
+        <section class="catalog-section">
+          <h3>{{ section.label }}</h3>
+          <div class="rule-grid">
+            @for (rule of section.rules; track rule.name) {
+              <article class="rule-card">
+                <div class="rule-title">
+                  {{ rule.name }}
+                  @if (rule.fromTemplate) {
+                    <span class="tag">template</span>
+                  }
+                </div>
+                <p><span class="meta">Uslov:</span> {{ rule.condition }}</p>
+                <p><span class="meta">Ishod:</span> {{ rule.outcome }}</p>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </dialog>
+}

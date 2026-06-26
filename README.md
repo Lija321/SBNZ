@@ -150,11 +150,14 @@ Sistem emituje:
 Baza znanja je organizovana kroz:
 
 - statička pravila za validaciju osnovnih podataka (`validation_rules.drl`),
+- statička pravila za preliminarnu klasifikaciju predmeta (`classification_rules.drl`),
 - statička pravila za određivanje statusa predmeta (`case_status_rules.drl`),
-- generisana pravila za proveru dokumentacije (`generated_document_rules.drl`),
+- `accumulate` pravila za zbirne pokazatelje i opterećenje kancelarije (`accumulate_rules.drl`),
+- pravila za označavanje važnih datuma (`date_rules.drl`),
 - CEP pravila za neaktivnost i dopunu dokumentacije (`cep_rules.drl`),
-- templejte za generisanje pravila po tipu predmeta, tipu stranke i tipu dokumenta (`document_checklist_template.drt`),
-- backward-chaining upite za proveru spremnosti predmeta (`queries.drl`).
+- templejt za generisanje pravila o dokumentaciji, koji se kompajlira u memoriji pri pokretanju aplikacije (`document_checklist_template.drt`),
+- forward pravila koja pozivaju backward-chaining upit radi procene glavne pravne radnje (`procedure_rules.drl`),
+- backward-chaining upite za spremnost predmeta i graf procesnih preduslova (`queries.drl`).
 
 Instanciranje templejt pravila:
 
@@ -169,9 +172,9 @@ Popunjavanje znanja:
 
 1. korisnik unosi ili ažurira predmet,
 2. sistem ubacuje činjenice u Working Memory,
-3. pravila izvode nove činjenice, kao što su `MissingRequiredData`, `CaseClassification`, `MissingRequiredDocument`, `SuggestedTask` i `CaseStatus`,
+3. pravila izvode nove činjenice, kao što su `MissingRequiredData`, `CaseClassification`, `MissingRequiredDocument`, `SuggestedTask`, `CaseStatus` i `MainActionAssessment`,
 4. pri svakoj promeni statusa ili kreiranju zadatka čuva se audit zapis,
-5. backward-chaining upiti omogućavaju proveru ciljnih pitanja, npr. da li je predmet spreman za inicijalni pregled.
+5. backward-chaining upiti omogućavaju proveru ciljnih pitanja, npr. da li je predmet spreman za inicijalni pregled i da li je moguća glavna pravna radnja.
 
 Interakcije zasnovane na znanju:
 
@@ -199,8 +202,16 @@ Interakcije zasnovane na znanju:
 - `SuggestedTask` – administrativni zadatak koji sistem predlaže.
 - `CaseStatusCandidate` – kandidat za status predmeta.
 - `CaseStatus` – konačni status predmeta u inicijalnoj obradi.
+- `CepAlert` / `CaseInactive` – CEP alarmi i oznaka neaktivnosti predmeta.
 - `CaseEvent` – događaj nad predmetom, koristi se za CEP.
 - `AuditRecord` – zapis o aktiviranom pravilu ili promeni statusa.
+
+Statičko znanje za backward chaining nad procesnim preduslovima:
+
+- `ProcedureGoal` – glavna pravna radnja za dati tip predmeta (npr. `DEBT_COLLECTION → FILE_LAWSUIT`).
+- `StepRequiresStep` – preduslovna veza između dva procesna koraka (grane grafa preduslova).
+- `StepRequiresDocument` – dokument koji je preduslov za određeni korak (listovi grafa).
+- `MainActionAssessment` – izvedeni zaključak da li je glavna pravna radnja blokirana nedostajućim preduslovima.
 
 ### 4.2 Tipovi predmeta, tipovi stranke i dokumenti
 
@@ -377,26 +388,41 @@ Sistem ne računa konačne pravne rokove, već označava datume koje korisnik tr
 | Damage date needs check | postoji datum nastanka štete | `ImportantDateNeedsCheck(DAMAGE_DATE)` + `SuggestedTask(VERIFY_DAMAGE_DATE)` |
 | Old case activity | poslednja radnja starija od praga | `CaseInactive(days=X)` + `SuggestedTask(CHECK_CASE_STATUS)` |
 
-### 5.8 Backward-chaining (Ciljno-orijentisano rezonovanje)
-Umesto pukog iščitavanja stanja, sistem koristi rekurzivne upite (```Queries```) za dinamičku derivaciju kompleksnih hipoteza na zahtev korisnika. Backward chaining se koristi za dokazivanje „procesne validnosti” predmeta kroz proveru hijerarhije podciljeva. Zaključak se ne čuva statički, već se izvodi u realnom vremenu pretraživanjem stabla činjenica.
+### 5.8 Backward-chaining (ciljno-orijentisano rezonovanje)
 
-| Upit (Cilj) | Opis rekurzivnog dokazivanja|
+Pored forward rezonovanja, sistem koristi backward-chaining upite (`queries.drl`) koji se izvode na zahtev korisnika. Zaključak se ne čuva statički, već se izvodi u realnom vremenu pretraživanjem činjenica. Sistem odgovara na dva ciljna pitanja.
+
+**Cilj 1 — „Da li je predmet spreman za inicijalni pregled?"** (`isCaseReadyForInitialReview`). Cilj se razlaže na podciljeve koji se dokazuju nad već izvedenim činjenicama:
+
+- osnovni podaci su kompletni (`isBasicDataComplete`),
+- predmet je klasifikovan (`hasClassification`),
+- nema nedostajućih obaveznih dokumenata (`missingRequiredDocuments` prazan),
+- nema otvorenih blokirajućih zadataka (`openBlockingTasks` prazan).
+
+**Cilj 2 — „Da li je moguća glavna pravna radnja?"** Ovo je suštinsko rekurzivno backward rezonovanje (po uzoru na klasičan `isContainedIn` primer tranzitivnog zatvaranja), a ne čitanje stanja.
+
+Svaki tip predmeta ima glavnu pravnu radnju (`ProcedureGoal`); ona zavisi od preduslovnih koraka (`StepRequiresStep`) i/ili dokumenata (`StepRequiresDocument`). Za naplatu potraživanja graf preduslova je:
+
+```text
+PODNOŠENJE TUŽBE  ⇐ dokument: opomena pre tužbe
+                  ⇐ SLANJE OPOMENE
+                       ⇐ UTVRĐIVANJE OSNOVA  ⇐ dokumenti: ugovor, faktura
+```
+
+| Upit (cilj) | Opis rekurzivnog dokazivanja |
 |---|---|
-| isCaseProcessable(caseId) | Korenski cilj: Uspešan je samo ako su svi podciljevi (identity, evidence, representation) istiniti. |
-| isIdentityVerified(caseId) | Podcilj 1: Unazad proverava da li dokumentacija odgovara tipu stranke (npr. JMBG za fizička lica vs. PIB za pravna). |
-| isEvidenceChainComplete(caseId) | Podcilj 2: Na osnovu klasifikacije, rekurzivno proverava postojanje korenskog dokaza (npr. Ugovor za dug, Zapisnik za štetu). |
-| isRepresentationResolved(caseId) | Podcilj 3: Proverava da li stranka zastupa sebe ili postoji validno punomoćje u dokumentaciji. |
+| `isStepBlocked(cid, goal)` | Korak je blokiran ako mu direktno nedostaje obavezni dokument **ili** je neki preduslovni korak (rekurzivno) blokiran. Rekurzija je pozitivna; negacija se primenjuje samo na baznu činjenicu `Document`. |
+| `dependsOnStep(goal, dependency)` | Tranzitivno zatvaranje preduslovnih koraka; sa nevezanom promenljivom nabraja ceo lanac preduslova jednog cilja. |
+| `missingDocumentForGoal(cid, goal, doc)` | Tranzitivno izvodi sve dokumente koji nedostaju za cilj; sa nevezanom promenljivom nabraja sve blokere kroz čitav graf. |
 
-**Primer rekurzivne logike:**
+**Korišćenje upita iz forward pravila.** Pravila u `procedure_rules.drl` za klasifikovani tip predmeta pronalaze njegovu glavnu radnju (`ProcedureGoal`), pozivaju upit `isStepBlocked` i upisuju činjenicu `MainActionAssessment` (da li je radnja blokirana) — dakle backward upit se poziva unutar forward pravila.
 
-Da bi sistem odgovorio na pitanje „Da li je predmet spreman za postupak?”, on ne gleda u polje status, već pokreće sledeći lanac dokazivanja:
+**Primer rekurzivne logike** (naplata potraživanja sa ugovorom i fakturom, ali bez opomene):
 
-1. Da bi predmet bio **procesibilan**, mora biti **verifikovan identitet**.
-2. Da bi **identitet** bio verifikovan, sistem unazad traži tip stranke:
-	- Ako je fizičko lice -> traži se ID_CARD.
-	- Ako je pravno lice -> traži se REGISTRATION_EXTRACT.
-
-3. Zatim se prelazi na sledeći podcilj (dokazni lanac) i tako do kraja stabla.
+1. Da bi sistem odgovorio „da li je moguće podneti tužbu", ne gleda u polje statusa, već pokreće `isStepBlocked(cid, FILE_LAWSUIT)`.
+2. Podnošenje tužbe direktno zahteva dokument „opomena pre tužbe" — pošto nedostaje, cilj je blokiran.
+3. Rekurzivno se proveravaju i preduslovni koraci: slanje opomene ⇐ utvrđivanje osnova ⇐ ugovor + faktura (oba prisutna, pa ti koraci nisu blokirani).
+4. Rezultat: glavna radnja je blokirana, a jedini bloker je nedostajuća opomena (`missingDocumentForGoal` to potvrđuje sa otvorenom promenljivom).
 
 ### 5.9 Sažetak ulančavanja kroz nivoe
 
@@ -408,7 +434,7 @@ U tipičnom toku rezonovanja:
 4. L4 accumulate pravila broje nedostajuće dokumente i formiraju status dokumentacije.
 5. L5 pravila kreiraju kandidate za status i biraju konačni status prema prioritetu.
 6. CEP pravila prate neaktivnost i kašnjenje u dopuni dokumentacije.
-7. Backward-chaining upiti odgovaraju na pitanja korisnika o spremnosti predmeta.
+7. Backward-chaining upiti odgovaraju na pitanja korisnika o spremnosti predmeta i, rekurzivno nad grafom preduslova, o izvodljivosti glavne pravne radnje.
 
 ---
 
@@ -554,6 +580,29 @@ Zaključak:
 
 - ako su svi uslovi ispunjeni, predmet je spreman za pregled;
 - ako nisu, sistem vraća šta nedostaje.
+
+### Primer 6 – Rekurzivni backward-chaining nad procesnim preduslovima
+
+Pitanje:
+
+```text
+Da li je moguće preduzeti glavnu pravnu radnju (podnošenje tužbe)?
+```
+
+Sistem pokreće `isStepBlocked(cid, FILE_LAWSUIT)`, koji se rekurzivno razlaže:
+
+- podnošenje tužbe ⇐ dokument „opomena pre tužbe" (+ korak „slanje opomene"),
+- slanje opomene ⇐ korak „utvrđivanje osnova",
+- utvrđivanje osnova ⇐ dokumenti „ugovor" i „faktura".
+
+Zaključak:
+
+- ako bilo koji dokument duž lanca nedostaje, cilj je blokiran i propagira se naviše;
+- `dependsOnStep` (sa nevezanom promenljivom) nabraja ceo lanac preduslova, a `missingDocumentForGoal` sve dokumente koji blokiraju cilj.
+
+Kompleksnost:
+
+- za razliku od čitanja polja statusa, zaključak se izvodi rekurzivnim pretraživanjem grafa preduslova; isti upit je iskorišćen i unutar forward pravila (`procedure_rules.drl`) za izvođenje činjenice `MainActionAssessment`.
 
 ---
 

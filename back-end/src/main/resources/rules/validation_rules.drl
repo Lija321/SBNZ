@@ -1,0 +1,54 @@
+package rules;
+
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.Party;
+import com.sbnz.legal.domain.MissingRequiredData;
+import com.sbnz.legal.domain.BasicDataStatus;
+import com.sbnz.legal.domain.enums.MissingDataField;
+import com.sbnz.legal.domain.enums.BasicDataCompleteness;
+import com.sbnz.legal.domain.enums.PartyRole;
+
+dialect "java"
+
+rule "Missing case name"
+when
+    $c : LegalCase(name == null || name.trim().isEmpty())
+    not MissingRequiredData(caseId == $c.caseId, field == MissingDataField.CASE_NAME)
+then
+    insert(new MissingRequiredData($c.getCaseId(), MissingDataField.CASE_NAME));
+end
+
+rule "Missing description"
+when
+    $c : LegalCase(description == null || description.trim().isEmpty())
+    not MissingRequiredData(caseId == $c.caseId, field == MissingDataField.CASE_DESCRIPTION)
+then
+    insert(new MissingRequiredData($c.getCaseId(), MissingDataField.CASE_DESCRIPTION));
+end
+
+rule "Missing opposing party"
+when
+    $c : LegalCase($id : caseId)
+    not Party(caseId == $id, role == PartyRole.OPPOSING)
+    not MissingRequiredData(caseId == $id, field == MissingDataField.OPPOSING_PARTY)
+then
+    insert(new MissingRequiredData($id, MissingDataField.OPPOSING_PARTY));
+end
+
+rule "Missing contact"
+when
+    $c : LegalCase($id : caseId)
+    Party(caseId == $id, role == PartyRole.CLIENT, contact == null || contact.trim().isEmpty())
+    not MissingRequiredData(caseId == $id, field == MissingDataField.CONTACT)
+then
+    insert(new MissingRequiredData($id, MissingDataField.CONTACT));
+end
+
+rule "Basic data complete"
+when
+    $c : LegalCase($id : caseId)
+    not MissingRequiredData(caseId == $id)
+    not BasicDataStatus(caseId == $id)
+then
+    insert(new BasicDataStatus($id, BasicDataCompleteness.COMPLETE));
+end

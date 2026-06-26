@@ -1,0 +1,95 @@
+package rules;
+
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.MissingRequiredDocument;
+import com.sbnz.legal.domain.DocumentationChecklistStatus;
+import com.sbnz.legal.domain.CaseStatus;
+import com.sbnz.legal.domain.OfficeCaseStatus;
+import com.sbnz.legal.domain.OfficeLoadWarning;
+import com.sbnz.legal.domain.enums.DocumentationStatus;
+import com.sbnz.legal.domain.enums.ProcessingStatus;
+import com.sbnz.legal.domain.enums.OfficeLoadWarningType;
+
+dialect "java"
+
+global Integer officeWaitingThreshold;
+global Integer officeReadyThreshold;
+
+rule "Documentation complete"
+salience 35
+when
+    $c : LegalCase($id : caseId)
+    $count : Number(intValue == 0) from accumulate(
+        MissingRequiredDocument(caseId == $id),
+        count(1)
+    )
+    not DocumentationChecklistStatus(caseId == $id)
+then
+    insert(new DocumentationChecklistStatus($id, DocumentationStatus.COMPLETE));
+end
+
+rule "Documentation partial"
+salience 35
+when
+    $c : LegalCase($id : caseId)
+    $count : Number(intValue >= 1 && intValue <= 2) from accumulate(
+        MissingRequiredDocument(caseId == $id),
+        count(1)
+    )
+    not DocumentationChecklistStatus(caseId == $id)
+then
+    insert(new DocumentationChecklistStatus($id, DocumentationStatus.PARTIAL));
+end
+
+rule "Documentation incomplete"
+salience 35
+when
+    $c : LegalCase($id : caseId)
+    $count : Number(intValue > 2) from accumulate(
+        MissingRequiredDocument(caseId == $id),
+        count(1)
+    )
+    not DocumentationChecklistStatus(caseId == $id)
+then
+    insert(new DocumentationChecklistStatus($id, DocumentationStatus.INCOMPLETE));
+end
+
+rule "Many cases waiting for client"
+salience 5
+when
+    $peerWaiting : Number() from accumulate(
+        OfficeCaseStatus(status == ProcessingStatus.WAITING_FOR_CLIENT),
+        count(1)
+    )
+    $currentWaiting : Number() from accumulate(
+        CaseStatus(status == ProcessingStatus.WAITING_FOR_CLIENT),
+        count(1)
+    )
+    eval($peerWaiting.intValue() + $currentWaiting.intValue() >= officeWaitingThreshold)
+    not OfficeLoadWarning(type == OfficeLoadWarningType.MANY_CASES_WAITING_FOR_DOCUMENTS)
+then
+    insert(new OfficeLoadWarning(
+        OfficeLoadWarningType.MANY_CASES_WAITING_FOR_DOCUMENTS,
+        $peerWaiting.intValue() + $currentWaiting.intValue()
+    ));
+end
+
+rule "Many ready cases"
+salience 5
+when
+    $peerReady : Number() from accumulate(
+        OfficeCaseStatus(status == ProcessingStatus.READY_FOR_REVIEW),
+        count(1)
+    )
+    $currentReady : Number() from accumulate(
+        CaseStatus(status == ProcessingStatus.READY_FOR_REVIEW),
+        count(1)
+    )
+    eval($peerReady.intValue() + $currentReady.intValue() >= officeReadyThreshold)
+    not OfficeLoadWarning(type == OfficeLoadWarningType.MANY_CASES_READY_FOR_REVIEW)
+then
+    insert(new OfficeLoadWarning(
+        OfficeLoadWarningType.MANY_CASES_READY_FOR_REVIEW,
+        $peerReady.intValue() + $currentReady.intValue()
+    ));
+end

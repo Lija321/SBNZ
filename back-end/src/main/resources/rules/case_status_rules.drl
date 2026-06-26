@@ -1,0 +1,97 @@
+package rules;
+
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.BasicDataStatus;
+import com.sbnz.legal.domain.CaseClassification;
+import com.sbnz.legal.domain.CaseStatus;
+import com.sbnz.legal.domain.CaseStatusCandidate;
+import com.sbnz.legal.domain.CepAlert;
+import com.sbnz.legal.domain.CaseInactive;
+import com.sbnz.legal.domain.DocumentationChecklistStatus;
+import com.sbnz.legal.domain.ImportantDateNeedsCheck;
+import com.sbnz.legal.domain.MissingRequiredData;
+import com.sbnz.legal.domain.MissingRequiredDocument;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.enums.BasicDataCompleteness;
+import com.sbnz.legal.domain.enums.DocumentationStatus;
+import com.sbnz.legal.domain.enums.ProcessingStatus;
+
+dialect "java"
+
+rule "Candidate incomplete"
+salience 30
+when
+    MissingRequiredData($id : caseId)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.INCOMPLETE)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.INCOMPLETE, 1));
+end
+
+rule "Candidate waiting for client"
+salience 30
+when
+    MissingRequiredDocument($id : caseId)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.WAITING_FOR_CLIENT)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.WAITING_FOR_CLIENT, 2));
+end
+
+rule "Candidate needs attention from CEP alert"
+salience 30
+when
+    CepAlert($id : caseId)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.NEEDS_ATTENTION)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.NEEDS_ATTENTION, 3));
+end
+
+rule "Candidate needs attention from inactivity"
+salience 30
+when
+    CaseInactive($id : caseId)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.NEEDS_ATTENTION)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.NEEDS_ATTENTION, 3));
+end
+
+rule "Candidate needs date check"
+salience 30
+when
+    ImportantDateNeedsCheck($id : caseId)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.NEEDS_DATE_CHECK)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.NEEDS_DATE_CHECK, 4));
+end
+
+rule "Candidate ready for review"
+salience 30
+when
+    $c : LegalCase($id : caseId, archived == false)
+    BasicDataStatus(caseId == $id, status == BasicDataCompleteness.COMPLETE)
+    CaseClassification(caseId == $id)
+    DocumentationChecklistStatus(caseId == $id, status == DocumentationStatus.COMPLETE)
+    not MissingRequiredDocument(caseId == $id)
+    not SuggestedTask(caseId == $id, open == true)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.READY_FOR_REVIEW)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.READY_FOR_REVIEW, 5));
+end
+
+rule "Candidate archived"
+salience 30
+when
+    LegalCase($id : caseId, archived == true)
+    not CaseStatusCandidate(caseId == $id, status == ProcessingStatus.ARCHIVED)
+then
+    insert(new CaseStatusCandidate($id, ProcessingStatus.ARCHIVED, 6));
+end
+
+rule "Select final case status"
+salience 1
+when
+    $candidate : CaseStatusCandidate($id : caseId, $status : status, $p : priority)
+    not CaseStatusCandidate(caseId == $id, priority < $p)
+    not CaseStatus(caseId == $id)
+then
+    insert(new CaseStatus($id, $status));
+end

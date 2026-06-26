@@ -1,0 +1,39 @@
+package rules;
+
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.CaseClassification;
+import com.sbnz.legal.domain.ProcedureGoal;
+import com.sbnz.legal.domain.MainActionAssessment;
+import com.sbnz.legal.domain.enums.ProcedureStep;
+
+dialect "java"
+
+/*
+ * Forward rules that drive the recursive backward-chaining query (isStepBlocked).
+ * For the classified case type we look up its main legal action (ProcedureGoal) and
+ * ask the query whether that goal is blocked by missing prerequisites, then assert a
+ * MainActionAssessment fact. This is the "use a backward query inside a rule" pattern.
+ */
+
+rule "Main legal action blocked by prerequisites"
+salience 20
+when
+    LegalCase($cid : caseId)
+    CaseClassification(caseId == $cid, $type : caseType)
+    ProcedureGoal($type, $goal;)
+    isStepBlocked($cid, $goal;)
+    not MainActionAssessment(caseId == $cid)
+then
+    insert(new MainActionAssessment($cid, $goal, true));
+end
+
+rule "Main legal action reachable"
+salience 10
+when
+    LegalCase($cid : caseId)
+    CaseClassification(caseId == $cid, $type : caseType)
+    ProcedureGoal($type, $goal;)
+    not MainActionAssessment(caseId == $cid)
+then
+    insert(new MainActionAssessment($cid, $goal, false));
+end

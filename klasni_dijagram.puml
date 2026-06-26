@@ -1,0 +1,286 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+top to bottom direction
+
+title SBNZ — domain model
+
+package "com.sbnz.legal.domain.enums" as domain_enums {
+  enum CaseType {
+    DEBT_COLLECTION
+    DAMAGES
+    PROPERTY
+    UNKNOWN
+  }
+  enum PartyType {
+    NATURAL_PERSON
+    LEGAL_ENTITY
+    PUBLIC_ENTITY
+    ANY
+  }
+  enum PartyRole {
+    CLIENT
+    OPPOSING
+  }
+  enum DocumentType {
+    CONTRACT
+    INVOICE
+    SERVICE_PROOF
+    PRE_LAWSUIT_NOTICE
+    DAMAGE_PROOF
+    DAMAGE_REPORT
+    CADASTRE_EXTRACT
+    OWNERSHIP_DOCUMENT
+    ID_CARD
+    REGISTRATION_EXTRACT
+    COMPANY_REGISTRATION_DATA
+    PERSONAL_DATA
+    AUTHORIZATION_OR_DECISION
+    OTHER
+  }
+  enum DateType {
+    OBLIGATION_DATE
+    DUE_DATE
+    DAMAGE_DATE
+    DECISION_RECEIVED_DATE
+    LAST_ACTION_DATE
+    OPENED_DATE
+  }
+  enum TaskType {
+    REQUEST_CONTRACT
+    REQUEST_INVOICE
+    REQUEST_SERVICE_PROOF
+    CHECK_IF_NOTICE_EXISTS
+    CHECK_IF_DAMAGE_REPORT_EXISTS
+    REQUEST_DAMAGE_PROOF
+    REQUEST_CADASTRE_EXTRACT
+    REQUEST_OWNERSHIP_DOCUMENT
+    CHECK_AUTHORIZATION_DOCUMENT
+    VERIFY_DUE_DATE
+    VERIFY_DAMAGE_DATE
+    VERIFY_DATE_RELEVANCE
+    ASSIGN_REVIEW
+    MANUAL_CASE_TYPE_REVIEW
+    CHECK_CASE_STATUS
+    CHECK_DOCUMENT_REQUEST_STATUS
+    CHECK_COMPANY_DATA
+    CHECK_PERSONAL_DATA
+  }
+  enum ProcessingStatus {
+    INCOMPLETE
+    WAITING_FOR_CLIENT
+    NEEDS_ATTENTION
+    NEEDS_DATE_CHECK
+    READY_FOR_REVIEW
+    ARCHIVED
+  }
+  enum MissingDataField {
+    CASE_NAME
+    CASE_DESCRIPTION
+    OPPOSING_PARTY
+    CONTACT
+  }
+  enum BasicDataCompleteness {
+    COMPLETE
+    INCOMPLETE
+  }
+  enum ClassificationConfidence {
+    HIGH
+    MEDIUM
+    LOW
+  }
+  enum DocumentationStatus {
+    COMPLETE
+    PARTIAL
+    INCOMPLETE
+  }
+  enum OfficeLoadWarningType {
+    MANY_CASES_WAITING_FOR_DOCUMENTS
+    MANY_CASES_READY_FOR_REVIEW
+  }
+  enum AuditRecordType {
+    RULE_FIRED
+    STATUS_CHANGED
+    TASK_CREATED
+    CASE_UPDATED
+    CASE_DELETED
+  }
+  enum CaseTimelineEventKind {
+    TASK_CREATED
+    DOCUMENT_ADDED
+    CASE_UPDATED
+  }
+  enum CepAlertType {
+    DOCUMENT_NOT_ADDED
+    CASE_INACTIVE
+    READY_NOT_REVIEWED
+  }
+}
+
+package "com.sbnz.legal.domain" as domain {
+  interface CaseEvent {
+    +getCaseId(): String
+    +getTs(): long
+  }
+
+  class LegalCase {
+    +caseId: String
+    +name: String
+    +description: String
+    +assignedUser: String
+    +openedAt: Instant
+    +lastUpdatedAt: Instant
+    +archived: boolean
+    +initialCaseType: CaseType
+  }
+  class Party {
+    +caseId: String
+    +role: PartyRole
+    +partyType: PartyType
+    +name: String
+    +contact: String
+  }
+  class Document {
+    +caseId: String
+    +documentType: DocumentType
+    +present: boolean
+  }
+  class DateFact {
+    +caseId: String
+    +dateType: DateType
+    +value: LocalDate
+  }
+  class CaseIndicator {
+    +caseId: String
+    +hasDebtOrClaim: boolean
+    +hasDamage: boolean
+    +hasContract: boolean
+    +hasInvoice: boolean
+    +hasRealEstate: boolean
+    +hasCadastreData: boolean
+    +hasOfficialAct: boolean
+    +claimAmount: BigDecimal
+  }
+  class CaseClassification {
+    +caseId: String
+    +caseType: CaseType
+    +confidence: ClassificationConfidence
+  }
+  class MissingRequiredData {
+    +caseId: String
+    +field: MissingDataField
+  }
+  class BasicDataStatus {
+    +caseId: String
+    +status: BasicDataCompleteness
+  }
+  class MissingRequiredDocument {
+    +caseId: String
+    +documentType: DocumentType
+  }
+  class MissingExpectedDocument {
+    +caseId: String
+    +documentType: DocumentType
+  }
+  class DocumentationChecklistStatus {
+    +caseId: String
+    +status: DocumentationStatus
+  }
+  class ImportantDateNeedsCheck {
+    +caseId: String
+    +dateType: DateType
+  }
+  class SuggestedTask {
+    +caseId: String
+    +taskType: TaskType
+    +open: boolean
+    +createdAt: Instant
+  }
+  class CaseStatusCandidate {
+    +caseId: String
+    +status: ProcessingStatus
+    +priority: int
+  }
+  class CaseStatus {
+    +caseId: String
+    +status: ProcessingStatus
+  }
+  class CepAlert {
+    +caseId: String
+    +alertType: CepAlertType
+    +raisedAt: Instant
+  }
+  class CaseInactive {
+    +caseId: String
+    +daysSinceActivity: int
+  }
+  class OfficeLoadWarning {
+    +type: OfficeLoadWarningType
+    +caseCount: int
+  }
+  class OfficeCaseStatus {
+    +caseId: String
+    +status: ProcessingStatus
+  }
+  class SimulatedClock {
+    +now: Instant
+  }
+  class AuditRecord {
+    +id: UUID
+    +caseId: String
+    +recordType: AuditRecordType
+    +ruleName: String
+    +firedAt: Instant
+    +explanation: String
+    +previousStatus: ProcessingStatus
+    +newStatus: ProcessingStatus
+    +taskType: TaskType
+  }
+}
+
+package "com.sbnz.legal.domain.cep" as domain_cep {
+  class TaskCreatedEvent <<event>> {
+    +caseId: String
+    +taskType: TaskType
+    +documentType: DocumentType
+    +ts: long
+  }
+  class DocumentAddedEvent <<event>> {
+    +caseId: String
+    +documentType: DocumentType
+    +ts: long
+  }
+  class CaseUpdatedEvent <<event>> {
+    +caseId: String
+    +ts: long
+  }
+}
+
+LegalCase "1" *-- "0..*" Party
+LegalCase "1" *-- "0..*" Document
+LegalCase "1" *-- "0..*" DateFact
+LegalCase "1" o-- "0..1" CaseIndicator
+
+LegalCase ..> CaseClassification : caseId
+LegalCase ..> MissingRequiredData : caseId
+LegalCase ..> BasicDataStatus : caseId
+LegalCase ..> MissingRequiredDocument : caseId
+LegalCase ..> MissingExpectedDocument : caseId
+LegalCase ..> DocumentationChecklistStatus : caseId
+LegalCase ..> ImportantDateNeedsCheck : caseId
+LegalCase ..> SuggestedTask : caseId
+LegalCase ..> CaseStatusCandidate : caseId
+LegalCase ..> CaseStatus : caseId
+LegalCase ..> CepAlert : caseId
+LegalCase ..> CaseInactive : caseId
+LegalCase ..> AuditRecord : caseId
+
+CaseEvent <|.. TaskCreatedEvent
+CaseEvent <|.. DocumentAddedEvent
+CaseEvent <|.. CaseUpdatedEvent
+
+LegalCase ..> TaskCreatedEvent :responsible for
+LegalCase ..> DocumentAddedEvent
+LegalCase ..> CaseUpdatedEvent
+
+@enduml

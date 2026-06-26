@@ -1,0 +1,96 @@
+.sim-dashboard {
+  margin-top: 0;
+}
+
+.sim-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sim-header h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.sim-header .hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 520px;
+  line-height: 1.45;
+}
+
+.sim-clock-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-clock-badge time {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.sim-clock-badge .clock-label,
+.sim-clock-badge .offset {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sim-clock-badge .offset {
+  color: var(--warn);
+}
+
+.sim-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(280px, 1.6fr);
+  gap: 12px;
+}
+
+.controls-panel,
+.rules-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.controls-panel h3,
+.rules-panel h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cep-steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.cep-steps li + li {
+  margin-top: 6px;
+}
+
+.cep-steps code {
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .sim-row {
+    grid-template-columns: 1fr;
+  }
+}

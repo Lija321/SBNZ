@@ -1,0 +1,220 @@
+.results h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.overview-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.overview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.overview-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--border);
+}
+
+.status-badge.warn {
+  background: color-mix(in srgb, var(--warn) 18%, var(--bg));
+  color: var(--warn);
+}
+
+.status-badge.ok {
+  background: color-mix(in srgb, var(--ok) 18%, var(--bg));
+  color: var(--ok);
+}
+
+.status-badge.neutral {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+  color: var(--accent);
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overview-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.warn-count {
+  color: var(--warn);
+}
+
+.confidence {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.demo-hint {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.result-section {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.result-section.attention {
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+  background: color-mix(in srgb, var(--warn) 6%, var(--bg));
+}
+
+.result-section h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.result-section.attention h3 {
+  color: var(--warn);
+}
+
+.item-group + .item-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.item-group h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.item-group p {
+  margin: 0;
+  font-size: 13px;
+}
+
+ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.candidates .priority {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.task-pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+  border: 1px solid var(--border);
+}
+
+.result-details {
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.result-details summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.result-details summary:hover {
+  color: var(--text);
+}
+
+.details-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.docs .ok {
+  color: var(--ok);
+}
+
+.docs .miss {
+  color: var(--warn);
+}
+
+.rules li {
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+
+.audit li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.audit-type {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.audit-detail {
+  color: var(--muted);
+  flex-basis: 100%;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}

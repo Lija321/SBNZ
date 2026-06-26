@@ -1,0 +1,38 @@
+template header
+caseType
+partyConstraint
+documentType
+missingFactType
+taskIfMissing
+
+package rules;
+
+import com.sbnz.legal.domain.CaseClassification;
+import com.sbnz.legal.domain.Document;
+import com.sbnz.legal.domain.Party;
+import com.sbnz.legal.domain.MissingRequiredDocument;
+import com.sbnz.legal.domain.MissingExpectedDocument;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.enums.CaseType;
+import com.sbnz.legal.domain.enums.DocumentType;
+import com.sbnz.legal.domain.enums.PartyType;
+import com.sbnz.legal.domain.enums.TaskType;
+
+dialect "java"
+
+template "document-checklist"
+
+rule "@{caseType}_missing_@{documentType}_@{row.rowNumber}" 
+salience 40
+when
+    $cc : CaseClassification($id : caseId, caseType == CaseType.@{caseType}) 
+    Party(caseId == $id, partyType == PartyType.@{partyConstraint}) 
+    not Document(caseId == $id, documentType == DocumentType.@{documentType}, present == true) 
+    not @{missingFactType}(caseId == $id, documentType == DocumentType.@{documentType}) 
+    not SuggestedTask(caseId == $id, taskType == TaskType.@{taskIfMissing}, open == true) 
+then
+    insert(new @{missingFactType}($id, DocumentType.@{documentType})); 
+    insert(new SuggestedTask($id, TaskType.@{taskIfMissing})); 
+end
+
+end template

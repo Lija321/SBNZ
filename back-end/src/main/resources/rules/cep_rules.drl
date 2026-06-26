@@ -1,0 +1,84 @@
+package rules;
+
+import com.sbnz.legal.domain.CaseInactive;
+import com.sbnz.legal.domain.CaseStatus;
+import com.sbnz.legal.domain.CaseStatusCandidate;
+import com.sbnz.legal.domain.CepAlert;
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.MissingRequiredDocument;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.cep.CaseUpdatedEvent;
+import com.sbnz.legal.domain.cep.DocumentAddedEvent;
+import com.sbnz.legal.domain.cep.TaskCreatedEvent;
+import com.sbnz.legal.domain.enums.CepAlertType;
+import com.sbnz.legal.domain.enums.ProcessingStatus;
+import com.sbnz.legal.domain.enums.TaskType;
+
+import java.time.Instant;
+
+dialect "java"
+
+/*
+ * Time comes from the STREAM-mode session (pseudo) clock, not from a fact.
+ * The engine advances the clock to "now" before firing, so temporal operators
+ * and sliding windows below are evaluated as of the simulated present.
+ */
+
+rule "CEP missing document not added"
+salience 15
+when
+    $task : TaskCreatedEvent($id : caseId, $doc : documentType)
+    MissingRequiredDocument(caseId == $id, documentType == $doc)
+    not DocumentAddedEvent(caseId == $id, documentType == $doc, this after[0s, 7d] $task)
+    not CepAlert(caseId == $id, alertType == CepAlertType.DOCUMENT_NOT_ADDED)
+then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
+    insert(new CepAlert($id, CepAlertType.DOCUMENT_NOT_ADDED, now));
+    insert(new SuggestedTask($id, TaskType.CHECK_DOCUMENT_REQUEST_STATUS, true, now));
+    insert(new CaseStatusCandidate($id, ProcessingStatus.NEEDS_ATTENTION, 3));
+end
+
+rule "CEP case waiting too long"
+salience 15
+when
+    (
+        CaseStatus($id : caseId, status == ProcessingStatus.WAITING_FOR_CLIENT) or
+        CaseStatusCandidate($id : caseId, status == ProcessingStatus.WAITING_FOR_CLIENT)
+    )
+    not ( CaseUpdatedEvent(caseId == $id) over window:time(14d) )
+    not ( DocumentAddedEvent(caseId == $id) over window:time(14d) )
+    not CepAlert(caseId == $id, alertType == CepAlertType.CASE_INACTIVE)
+then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
+    insert(new CepAlert($id, CepAlertType.CASE_INACTIVE, now));
+    insert(new SuggestedTask($id, TaskType.CHECK_CASE_STATUS, true, now));
+end
+
+rule "CEP ready case not reviewed"
+salience 15
+when
+    (
+        CaseStatus($id : caseId, status == ProcessingStatus.READY_FOR_REVIEW) or
+        CaseStatusCandidate($id : caseId, status == ProcessingStatus.READY_FOR_REVIEW)
+    )
+    not ( CaseUpdatedEvent(caseId == $id) over window:time(7d) )
+    not CepAlert(caseId == $id, alertType == CepAlertType.READY_NOT_REVIEWED)
+then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
+    insert(new CepAlert($id, CepAlertType.READY_NOT_REVIEWED, now));
+    insert(new SuggestedTask($id, TaskType.ASSIGN_REVIEW, true, now));
+end
+
+rule "Old case activity"
+salience 15
+when
+    $case : LegalCase($id : caseId, $updated : lastUpdatedAt)
+    not ( CaseUpdatedEvent(caseId == $id) over window:time(30d) )
+    not ( DocumentAddedEvent(caseId == $id) over window:time(30d) )
+    not CaseInactive(caseId == $id)
+then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
+    int days = (int) java.time.Duration.between($updated, now).toDays();
+    insert(new CaseInactive($id, days));
+    insert(new SuggestedTask($id, TaskType.CHECK_CASE_STATUS, true, now));
+end

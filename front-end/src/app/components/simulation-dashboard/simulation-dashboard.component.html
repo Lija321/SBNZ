@@ -1,0 +1,40 @@
+<section class="sim-dashboard">
+  <div class="sim-header">
+    <div>
+      <h2>CEP simulacija vremena</h2>
+      <p class="hint">Pomeri simulacioni sat da demonstriraš vremenski zavisna pravila (README §5.6).</p>
+    </div>
+    @if (simulatedNow()) {
+      <div class="sim-clock-badge">
+        <span class="clock-label">Simulirano</span>
+        <time>{{ simulatedNow() | date:'yyyy-MM-dd HH:mm' }}</time>
+        @if (offsetDays() > 0) {
+          <span class="offset">+{{ offsetDays() }} d</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="sim-row">
+    <div class="controls-panel">
+      <h3>Kontrole</h3>
+      <div class="quick-actions">
+        <button type="button" class="primary" (click)="advanceDays.emit(7)" [disabled]="busy()">+7 dana</button>
+        <button type="button" (click)="advanceDays.emit(1)" [disabled]="busy()">+1</button>
+        <button type="button" (click)="advanceDays.emit(14)" [disabled]="busy()">+14</button>
+        <button type="button" (click)="advanceDays.emit(30)" [disabled]="busy()">+30</button>
+        <button type="button" (click)="resetClock.emit()" [disabled]="busy()">Reset</button>
+      </div>
+    </div>
+
+    <div class="rules-panel">
+      <h3>CEP pravila — demo tok</h3>
+      <ol class="cep-steps">
+        <li><strong>Dokument nije dodat</strong> — Demo predmet → +7 dana → Ponovi procenu</li>
+        <li><strong>Čeka predugo</strong> — <code>WAITING_FOR_CLIENT</code> + 14 dana</li>
+        <li><strong>Spreman, nije pregledan</strong> — kompletan predmet + 7 dana</li>
+        <li><strong>Stara neaktivnost</strong> — +30 dana od poslednje radnje</li>
+      </ol>
+    </div>
+  </div>
+</section>

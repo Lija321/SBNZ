@@ -1,0 +1,62 @@
+<div class="bc">
+  <div class="bc-head">
+    <h2>Backward chaining (unazadno zaključivanje)</h2>
+    <p class="hint">
+      Sistem cilj razlaže na podciljeve i upitima ih dokazuje nad činjenicama predmeta.
+      Glavna pravna radnja (npr. podnošenje tužbe) se izvodi rekurzivnim upitom kroz lanac
+      procesnih preduslova (radnja ⇐ opomena ⇐ osnov potraživanja ⇐ dokumenti).
+    </p>
+  </div>
+
+  <div class="bc-actions">
+    <button type="button" (click)="runReadyForReview()" [disabled]="busy() || !caseId()">
+      Spreman za inicijalni pregled?
+    </button>
+    <button type="button" (click)="runProcessable()" [disabled]="busy() || !caseId()">
+      Da li je moguća glavna pravna radnja?
+    </button>
+  </div>
+
+  @if (error()) {
+    <p class="bc-error">{{ error() }}</p>
+  }
+
+  @if (report(); as r) {
+    <div class="bc-result">
+      <div class="bc-verdict" [class.ok]="r.satisfied" [class.no]="!r.satisfied">
+        <span class="bc-icon">{{ r.satisfied ? '✓' : '✕' }}</span>
+        <span class="bc-summary">{{ r.summary }}</span>
+      </div>
+
+      @if (r.subGoals.length) {
+        <div class="bc-section">
+          <h3>Podciljevi</h3>
+          <ul class="bc-goals">
+            @for (goal of r.subGoals; track goal.name) {
+              <li [class.ok]="goal.satisfied" [class.no]="!goal.satisfied">
+                <span class="bc-mark">{{ goal.satisfied ? '✓' : '✕' }}</span>
+                <span class="bc-goal-text">
+                  <span class="bc-goal-name">{{ subGoalLabel(goal.name) }}</span>
+                  <span class="bc-goal-detail">{{ goal.detail }}</span>
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (r.blockers.length) {
+        <div class="bc-section">
+          <h3>Šta blokira cilj</h3>
+          <ul class="bc-blockers">
+            @for (blocker of r.blockers; track blocker) {
+              <li>{{ blocker }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  } @else if (!busy()) {
+    <p class="hint">Izaberi predmet i pokreni upit.</p>
+  }
+</div>

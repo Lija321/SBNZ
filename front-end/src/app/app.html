@@ -1,0 +1,92 @@
+<div class="shell">
+  <header class="header">
+    <div class="title">
+      <div class="app-name">{{ title() }}</div>
+      <div class="subtitle">Ekspertski sistem — inicijalna obrada</div>
+    </div>
+    <div class="actions">
+      <rule-catalog />
+      <button type="button" (click)="startNewCase()" [disabled]="busy()">Novi</button>
+      <button type="button" (click)="loadDemo()" [disabled]="busy()">Demo</button>
+      @if (report()) {
+        <button type="button" (click)="refresh()" [disabled]="busy()">Ponovi procenu</button>
+        <button type="button" class="danger" (click)="deleteCurrentCase()" [disabled]="busy()">Obriši</button>
+      }
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="card error">{{ error() }}</div>
+  }
+
+  <div class="layout">
+    <aside class="card case-list">
+      <h2>Predmeti</h2>
+      @if (caseList().length) {
+        <ul>
+          @for (c of caseList(); track c.caseId) {
+            <li>
+              <button
+                type="button"
+                class="case-item"
+                [class.active]="c.caseId === report()?.caseId"
+                (click)="selectCase(c.caseId)"
+              >
+                <span class="case-name">{{ c.legalCase.name }}</span>
+                <span class="case-status">{{ labelStatus(c.summary?.status) }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="hint">Nema sačuvanih predmeta.</p>
+      }
+    </aside>
+
+    <div class="main-grid">
+      <div class="card">
+        <case-form
+          [editCaseId]="editCaseId()"
+          [initialData]="editFormData()"
+          (submitCreate)="onCreate($event)"
+          (submitUpdate)="onUpdate($event)"
+          (cancelEdit)="onCancelEdit()"
+        />
+      </div>
+      <div class="card">
+        @if (report()) {
+          <case-results
+          [report]="report()"
+          [auditLog]="auditLog()"
+        />
+        } @else {
+          <div class="welcome">
+            <h2>Početak</h2>
+            <ol class="welcome-steps">
+              <li>Klikni <strong>Demo</strong> u zaglavlju</li>
+              <li>Pregledaj rezultat procene desno</li>
+              <li>U CEP panelu ispod klikni <strong>+7 dana</strong></li>
+              <li>Klikni <strong>Ponovi procenu</strong></li>
+            </ol>
+            <p class="hint">Backend mora biti pokrenut (vidi RUN.md).</p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (report()) {
+    <div class="card bc-panel">
+      <backward-chaining-panel [caseId]="report()?.caseId ?? null" />
+    </div>
+  }
+
+  <div class="card cep-panel">
+    <simulation-dashboard
+      [simulatedNow]="simulatedNow()"
+      [busy]="busy()"
+      (advanceDays)="advanceSimulation($event)"
+      (resetClock)="resetSimulation()"
+    />
+  </div>
+</div>

@@ -1,0 +1,52 @@
+.form h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field select {
+  width: 100%;
+}
+
+.checks {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.checks legend {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.checks input[type='checkbox'] {
+  width: auto;
+}
+
+.primary {
+  margin-top: 4px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.form-actions .primary {
+  flex: 1;
+}

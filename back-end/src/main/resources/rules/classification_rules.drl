@@ -1,0 +1,75 @@
+package rules;
+
+import com.sbnz.legal.domain.LegalCase;
+import com.sbnz.legal.domain.CaseIndicator;
+import com.sbnz.legal.domain.CaseClassification;
+import com.sbnz.legal.domain.Document;
+import com.sbnz.legal.domain.DateFact;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.enums.CaseType;
+import com.sbnz.legal.domain.enums.ClassificationConfidence;
+import com.sbnz.legal.domain.enums.DocumentType;
+import com.sbnz.legal.domain.enums.DateType;
+import com.sbnz.legal.domain.enums.TaskType;
+
+dialect "java"
+
+rule "Classify from initial case type"
+salience 100
+when
+    $c : LegalCase($id : caseId, $type : initialCaseType)
+    eval($type != null && $type != CaseType.UNKNOWN)
+    not CaseClassification(caseId == $id)
+then
+    insert(new CaseClassification($id, $type, ClassificationConfidence.HIGH));
+end
+
+rule "Classify debt collection"
+salience 50
+when
+    $c : LegalCase($id : caseId)
+    CaseIndicator(caseId == $id, hasDebtOrClaim == true)
+    (
+        CaseIndicator(caseId == $id, hasInvoice == true) or
+        DateFact(caseId == $id, dateType == DateType.DUE_DATE) or
+        Document(caseId == $id, documentType == DocumentType.INVOICE, present == true)
+    )
+    not CaseClassification(caseId == $id)
+then
+    insert(new CaseClassification($id, CaseType.DEBT_COLLECTION, ClassificationConfidence.HIGH));
+end
+
+rule "Classify damages"
+salience 50
+when
+    $c : LegalCase($id : caseId)
+    CaseIndicator(caseId == $id, hasDamage == true)
+    (
+        Document(caseId == $id, documentType == DocumentType.DAMAGE_PROOF, present == true) or
+        Document(caseId == $id, documentType == DocumentType.DAMAGE_REPORT, present == true)
+    )
+    not CaseClassification(caseId == $id)
+then
+    insert(new CaseClassification($id, CaseType.DAMAGES, ClassificationConfidence.HIGH));
+end
+
+rule "Classify property"
+salience 50
+when
+    $c : LegalCase($id : caseId)
+    CaseIndicator(caseId == $id, hasRealEstate == true || hasCadastreData == true)
+    not CaseClassification(caseId == $id)
+then
+    insert(new CaseClassification($id, CaseType.PROPERTY, ClassificationConfidence.HIGH));
+end
+
+rule "Unknown case type"
+salience 1
+when
+    $c : LegalCase($id : caseId)
+    not CaseClassification(caseId == $id)
+    not SuggestedTask(caseId == $id, taskType == TaskType.MANUAL_CASE_TYPE_REVIEW)
+then
+    insert(new CaseClassification($id, CaseType.UNKNOWN, ClassificationConfidence.LOW));
+    insert(new SuggestedTask($id, TaskType.MANUAL_CASE_TYPE_REVIEW));
+end

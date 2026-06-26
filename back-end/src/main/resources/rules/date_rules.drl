@@ -1,0 +1,39 @@
+package rules;
+
+import com.sbnz.legal.domain.DateFact;
+import com.sbnz.legal.domain.ImportantDateNeedsCheck;
+import com.sbnz.legal.domain.SuggestedTask;
+import com.sbnz.legal.domain.enums.DateType;
+import com.sbnz.legal.domain.enums.TaskType;
+
+dialect "java"
+
+rule "Due date needs check"
+salience 45
+when
+    $d : DateFact($id : caseId, dateType == DateType.DUE_DATE)
+    not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DUE_DATE)
+then
+    insert(new ImportantDateNeedsCheck($id, DateType.DUE_DATE));
+    insert(new SuggestedTask($id, TaskType.VERIFY_DUE_DATE));
+end
+
+rule "Decision date needs check"
+salience 45
+when
+    $d : DateFact($id : caseId, dateType == DateType.DECISION_RECEIVED_DATE)
+    not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DECISION_RECEIVED_DATE)
+then
+    insert(new ImportantDateNeedsCheck($id, DateType.DECISION_RECEIVED_DATE));
+    insert(new SuggestedTask($id, TaskType.VERIFY_DATE_RELEVANCE));
+end
+
+rule "Damage date needs check"
+salience 45
+when
+    $d : DateFact($id : caseId, dateType == DateType.DAMAGE_DATE)
+    not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DAMAGE_DATE)
+then
+    insert(new SuggestedTask($id, TaskType.VERIFY_DAMAGE_DATE));
+    insert(new ImportantDateNeedsCheck($id, DateType.DAMAGE_DATE));
+end

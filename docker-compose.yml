@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sbnz-postgres
+    environment:
+      POSTGRES_DB: sbnz
+      POSTGRES_USER: sbnz
+      POSTGRES_PASSWORD: sbnz
+    ports:
+      - "5432:5432"
+    volumes:
+      - sbnz_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sbnz_pgdata:

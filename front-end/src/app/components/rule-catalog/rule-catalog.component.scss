@@ -1,0 +1,102 @@
+.catalog-btn {
+  font-size: 12px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 40;
+}
+
+.catalog-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: min(920px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.catalog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.catalog-header h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.catalog-header .hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.catalog-body {
+  padding: 12px 16px 16px;
+  overflow: auto;
+  max-height: calc(100vh - 120px);
+}
+
+.catalog-section + .catalog-section {
+  margin-top: 16px;
+}
+
+.catalog-section h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.rule-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.rule-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.rule-card p {
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
+.meta {
+  color: var(--muted);
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 500;
+}
