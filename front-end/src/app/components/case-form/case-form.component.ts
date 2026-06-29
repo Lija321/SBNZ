@@ -69,6 +69,10 @@ export class CaseFormComponent {
     { type: 'COMPANY_REGISTRATION_DATA', label: DOCUMENT_LABELS.COMPANY_REGISTRATION_DATA },
   ];
 
+  protected readonly otherDocuments: DocumentField[] = [
+    { type: 'OTHER', label: DOCUMENT_LABELS.OTHER },
+  ];
+
   protected readonly allDocumentTypes: DocumentType[] = [
     'CONTRACT',
     'INVOICE',
@@ -83,6 +87,7 @@ export class CaseFormComponent {
     'REGISTRATION_EXTRACT',
     'PERSONAL_DATA',
     'COMPANY_REGISTRATION_DATA',
+    'OTHER',
   ];
 
   name = '';
@@ -100,9 +105,13 @@ export class CaseFormComponent {
   hasRealEstate = false;
   hasCadastreData = false;
   hasOfficialAct = false;
+  claimAmount: number | null = null;
   dueDate = '';
   damageDate = '';
   decisionReceivedDate = '';
+  obligationDate = '';
+  lastActionDate = '';
+  openedDate = '';
   documentPresent: Record<DocumentType, boolean> = this.emptyDocuments();
   archived = false;
 
@@ -134,9 +143,13 @@ export class CaseFormComponent {
     this.hasRealEstate = false;
     this.hasCadastreData = false;
     this.hasOfficialAct = false;
+    this.claimAmount = null;
     this.dueDate = '';
     this.damageDate = '';
     this.decisionReceivedDate = '';
+    this.obligationDate = '';
+    this.lastActionDate = '';
+    this.openedDate = '';
     this.documentPresent = this.emptyDocuments();
     this.archived = false;
   }
@@ -177,6 +190,9 @@ export class CaseFormComponent {
     this.dueDate = this.dateValue(req, 'DUE_DATE');
     this.damageDate = this.dateValue(req, 'DAMAGE_DATE');
     this.decisionReceivedDate = this.dateValue(req, 'DECISION_RECEIVED_DATE');
+    this.obligationDate = this.dateValue(req, 'OBLIGATION_DATE');
+    this.lastActionDate = this.dateValue(req, 'LAST_ACTION_DATE');
+    this.openedDate = this.dateValue(req, 'OPENED_DATE');
 
     this.hasDebtOrClaim = req.indicators.hasDebtOrClaim;
     this.hasDamage = req.indicators.hasDamage;
@@ -185,6 +201,7 @@ export class CaseFormComponent {
     this.hasRealEstate = req.indicators.hasRealEstate;
     this.hasCadastreData = req.indicators.hasCadastreData;
     this.hasOfficialAct = req.indicators.hasOfficialAct;
+    this.claimAmount = req.indicators.claimAmount ?? null;
   }
 
   private buildRequest(): UpdateCaseRequest {
@@ -194,11 +211,12 @@ export class CaseFormComponent {
     }));
 
     const dateFacts: DateFact[] = [];
-    if (this.dueDate) dateFacts.push({ dateType: 'DUE_DATE', value: this.dueDate });
-    if (this.damageDate) dateFacts.push({ dateType: 'DAMAGE_DATE', value: this.damageDate });
-    if (this.decisionReceivedDate) {
-      dateFacts.push({ dateType: 'DECISION_RECEIVED_DATE', value: this.decisionReceivedDate });
-    }
+    this.appendDateFact(dateFacts, 'DUE_DATE', this.dueDate);
+    this.appendDateFact(dateFacts, 'DAMAGE_DATE', this.damageDate);
+    this.appendDateFact(dateFacts, 'DECISION_RECEIVED_DATE', this.decisionReceivedDate);
+    this.appendDateFact(dateFacts, 'OBLIGATION_DATE', this.obligationDate);
+    this.appendDateFact(dateFacts, 'LAST_ACTION_DATE', this.lastActionDate);
+    this.appendDateFact(dateFacts, 'OPENED_DATE', this.openedDate);
 
     return {
       name: this.name,
@@ -229,8 +247,15 @@ export class CaseFormComponent {
         hasRealEstate: this.hasRealEstate,
         hasCadastreData: this.hasCadastreData,
         hasOfficialAct: this.hasOfficialAct,
+        claimAmount: this.claimAmount,
       },
     };
+  }
+
+  private appendDateFact(dateFacts: DateFact[], dateType: DateType, value: string) {
+    if (value) {
+      dateFacts.push({ dateType, value });
+    }
   }
 
   private emptyDocuments(): Record<DocumentType, boolean> {

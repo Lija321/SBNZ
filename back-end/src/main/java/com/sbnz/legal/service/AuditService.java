@@ -25,10 +25,16 @@ public class AuditService {
 
     private final AuditRecordRepository auditRecordRepository;
     private final CasePersistenceMapper mapper;
+    private final SimulatedClockService simulatedClockService;
 
-    public AuditService(AuditRecordRepository auditRecordRepository, CasePersistenceMapper mapper) {
+    public AuditService(
+            AuditRecordRepository auditRecordRepository,
+            CasePersistenceMapper mapper,
+            SimulatedClockService simulatedClockService
+    ) {
         this.auditRecordRepository = auditRecordRepository;
         this.mapper = mapper;
+        this.simulatedClockService = simulatedClockService;
     }
 
     @Transactional
@@ -111,7 +117,7 @@ public class AuditService {
                 caseId,
                 AuditRecordType.CASE_UPDATED,
                 null,
-                Instant.now(),
+                simulatedClockService.now(),
                 "Case data updated",
                 null,
                 null,
@@ -125,7 +131,7 @@ public class AuditService {
                 caseId,
                 AuditRecordType.CASE_DELETED,
                 null,
-                Instant.now(),
+                simulatedClockService.now(),
                 "Case deleted: " + caseName,
                 null,
                 null,
@@ -152,7 +158,7 @@ public class AuditService {
         record.setCaseId(caseId);
         record.setRecordType(recordType);
         record.setRuleName(ruleName);
-        record.setFiredAt(firedAt != null ? firedAt : Instant.now());
+        record.setFiredAt(firedAt != null ? firedAt : simulatedClockService.now());
         record.setExplanation(explanation);
         record.setPreviousStatus(previousStatus);
         record.setNewStatus(newStatus);

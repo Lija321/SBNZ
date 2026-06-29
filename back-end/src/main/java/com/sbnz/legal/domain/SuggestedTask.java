@@ -15,8 +15,4 @@ public class SuggestedTask {
     private TaskType taskType;
     private boolean open;
     private Instant createdAt;
-
-    public SuggestedTask(String caseId, TaskType taskType) {
-        this(caseId, taskType, true, Instant.now());
-    }
 }

@@ -18,6 +18,8 @@ import com.sbnz.legal.domain.enums.DocumentType;
 import com.sbnz.legal.domain.enums.PartyType;
 import com.sbnz.legal.domain.enums.TaskType;
 
+import java.time.Instant;
+
 dialect "java"
 
 template "document-checklist"
@@ -37,12 +39,13 @@ when
 @end{}
     not SuggestedTask(caseId == $id, taskType == TaskType.@{taskIfMissing}, open == true)
 then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
 @if{required == "TRUE"}
     insert(new MissingRequiredDocument($id, DocumentType.@{documentType}));
 @else{}
     insert(new MissingExpectedDocument($id, DocumentType.@{documentType}));
 @end{}
-    insert(new SuggestedTask($id, TaskType.@{taskIfMissing}));
+    insert(new SuggestedTask($id, TaskType.@{taskIfMissing}, true, now));
 end
 
 end template

@@ -1,26 +1,51 @@
-# Demo scenariji — SBNZ pravni ekspertski sistem
+# Demo uputstvo — SBNZ pravni ekspertski sistem
 
-Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna pravila iz baze znanja (vidi **Katalog pravila** u aplikaciji ili README §5).
-
-**Preduslov:** backend i frontend pokrenuti ([RUN.md](RUN.md)) → [http://localhost:4200](http://localhost:4200)
-
-**Opšti tok u aplikaciji:**
-1. **Novi** — ručni unos predmeta  
-2. **Demo** — ugrađeni primer naplate potraživanja  
-3. **Sačuvaj i proceni** / **Sačuvaj izmene** — pokreće L1–L5  
-4. **Ponovi procenu** — ponovna evaluacija bez izmene podataka  
-5. CEP panel **+N dana** → zatim **Ponovi procenu** (vremenska pravila)
+Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna pravila iz baze znanja (vidi **Katalog pravila** u zaglavlju aplikacije ili README §5).
 
 ---
 
-## Pregled — koji scenarij pokriva šta
+## Pokretanje (preduslov)
+
+```bash
+# 1. Baza
+docker compose up -d
+
+# 2. Backend (port 8080)
+cd back-end && ./mvnw spring-boot:run
+
+# 3. Frontend (port 4200, proxy ka backendu)
+cd front-end && npm install && npm start
+```
+
+Otvori [http://localhost:4200](http://localhost:4200).
+
+---
+
+## Kontrole u aplikaciji
+
+| Akcija | Gde | Šta radi |
+|--------|-----|----------|
+| **Novi** | Zaglavlje | Prazna forma za ručni unos |
+| **Demo** | Zaglavlje | Ugrađeni predmet naplate potraživanja |
+| **Sačuvaj i proceni** | Forma | Kreira predmet → L1–L5 evaluacija |
+| **Sačuvaj izmene** | Forma (edit) | Ažurira predmet + ponovna evaluacija |
+| **Ponovi procenu** | Zaglavlje | Evaluacija bez izmene podataka |
+| **+N dana / Reset** | CEP panel | Pomeranje simulacionog sata |
+| **Katalog pravila** | Zaglavlje | Pregled svih pravila po nivoima |
+| **BC panel** | Ispod forme | Backward-chaining upiti (kad je predmet izabran) |
+
+**Važno za CEP:** posle pomeranja sata uvek klikni **Ponovi procenu** (ili izaberi predmet ponovo) da se vremenska pravila ponovo izvrše.
+
+---
+
+## Pregled scenarija
 
 | # | Scenarij | Pravila / nivo |
 |---|----------|----------------|
 | 1 | [Ugrađeni Demo](#1-ugrađeni-demo-glavni-tok) | L2, L3, L4, L5, DATES, CEP |
 | 2 | [Nepotpun predmet (L1)](#2-nepotpun-predmet-l1) | L1, L5 `INCOMPLETE` |
 | 3 | [Naplata potraživanja (L2 + L3)](#3-naplata-potraživanja-l2--l3) | L2, L3, L4, L5 |
-| 4 | [Naknada štete (L2 + L3)](#4-naknada-štete-l2--l3) | L2, L3 |
+| 4 | [Naknada štete (L2 + L3)](#4-naknada-štete-l2--l3) | L2, L3, DATES |
 | 5 | [Imovinski predmet (L2 + L3)](#5-imovinski-predmet-l2--l3) | L2, L3, L4 |
 | 6 | [Nepoznat tip predmeta (L2)](#6-nepoznat-tip-predmeta-l2) | L2 `UNKNOWN` |
 | 7 | [Klasifikacija iz početnog tipa (L2)](#7-klasifikacija-iz-početnog-tipa-l2) | L2 salience 100 |
@@ -34,8 +59,22 @@ Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna p
 | 15 | [CEP — stara neaktivnost](#15-cep--stara-neaktivnost) | CEP §4, `CaseInactive` |
 | 16 | [Arhiviran predmet](#16-arhiviran-predmet) | L5 `ARCHIVED` |
 | 17 | [Transparentnost](#17-transparentnost-audit--pravila) | Audit, rule firings |
+| 18 | [Backward chaining — spreman?](#18-backward-chaining--spreman-za-pregled) | BC upit `isCaseReadyForInitialReview` |
+| 19 | [Backward chaining — glavna radnja](#19-backward-chaining--glavna-pravna-radnja) | BC + `procedure_rules.drl` |
 
-**Preporučen redosled za odbranu (15–20 min):** 1 → 12 → 10 → 17, zatim po izboru 2, 4, 8 ili 9.
+**Preporučen redosled za odbranu (15–20 min):** 1 → 12 → 10 → 18 → 19 → 17. Po izboru dodaj 2, 4, 8 ili 9.
+
+---
+
+## Brzi script za odbranu (≈15 min)
+
+1. **Demo** → pokaži status, zadatke, klasifikaciju (2 min)
+2. CEP **+7 dana** → **Ponovi procenu** → CEP alarm (2 min)
+3. **Detalji rezonovanja** → kandidati za status, prioritet (2 min)
+4. BC panel → **Spreman za inicijalni pregled?** na Demo predmetu → `false` + podciljevi (2 min)
+5. BC panel → **Da li je moguća glavna pravna radnja?** → blokirana zbog opomene (3 min)
+6. **Transparentnost** → aktivirana pravila + audit (2 min)
+7. *(opciono)* **Novi** → prazan predmet → L1 **Nepotpun** (2 min)
 
 ---
 
@@ -58,6 +97,7 @@ Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna p
 | L4 | Dokumentacija **delimična** (1 nedostajući obavezan) |
 | L5 | Status **Čeka dopunu od stranke** (prioritet 2) |
 | DATES | Datum dospelosti → zadatak *Proveriti datum dospelosti* |
+| Procedure | Glavna radnja **Podnošenje tužbe** — **blokirana** |
 | Zadaci | `REQUEST_SERVICE_PROOF`, `CHECK_IF_NOTICE_EXISTS`, `CHECK_COMPANY_DATA`, `VERIFY_DUE_DATE` |
 
 ### Očekivano (posle +7 dana + Ponovi procenu)
@@ -65,17 +105,17 @@ Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna p
 | Oblast | Rezultat |
 |--------|----------|
 | CEP | Alarm **Dokument nije dodat u roku** |
-| L5 | Status **Zahteva pažnju** (CEP ima prioritet 3 > čekanje dokumentacije) |
+| L5 | Status **Zahteva pažnju** (CEP prioritet 3 > čekanje dokumentacije) |
 | Zadaci | + `CHECK_DOCUMENT_REQUEST_STATUS` |
 
 ### Šta reći asistentu
-> Sistem ne odlučuje umesto pravnika — klasifikuje predmet, proverava čeklistu, predlaže administrativne zadatke i prati rokove kroz CEP.
+> Sistem ne donosi pravno mišljenje — klasifikuje predmet, proverava čeklistu, predlaže administrativne zadatke i prati rokove kroz CEP.
 
 ---
 
 ## 2. Nepotpun predmet (L1)
 
-**Cilj:** Validacija osnovnih podataka — bez kompletnih podataka predmet ne može dalje.
+**Cilj:** Validacija osnovnih podataka.
 
 ### Unos (Novi predmet)
 
@@ -90,10 +130,9 @@ Vodič za demonstraciju predmetnom asistentu. Svaki scenarij pokriva konkretna p
 Klik **Sačuvaj i proceni**.
 
 ### Očekivano
-
-- **Za pažnju / akcije:** nedostaju naziv, opis, druga strana, kontakt (L1)
-- **Status (L5):** **Nepotpun** (prioritet 1 — najviši)
-- U **Detaljima:** kandidat `INCOMPLETE`
+- **Predložene akcije:** nedostaju naziv, opis, druga strana, kontakt
+- **Status:** **Nepotpun** (prioritet 1)
+- **Detalji:** kandidat `INCOMPLETE`
 
 ### Pokrivena pravila
 `Missing case name`, `Missing description`, `Missing opposing party`, `Missing contact`, `Candidate incomplete`
@@ -102,9 +141,7 @@ Klik **Sačuvaj i proceni**.
 
 ## 3. Naplata potraživanja (L2 + L3)
 
-**Cilj:** Ručno kreiranje predmeta istog tipa kao Demo, sa varijantama dokumentacije.
-
-### Varijanta A — ista situacija kao Demo (ručno)
+### Varijanta A — kao Demo (ručno)
 
 | Polje | Vrednost |
 |-------|----------|
@@ -118,24 +155,20 @@ Klik **Sačuvaj i proceni**.
 | Dokumenti (naplata) | Faktura ✓, Ugovor ✓, Dokaz o usluzi ✗ |
 | Dokumenti | Opomena ✗ |
 
-**Očekivano:** L2 `DEBT_COLLECTION`, L3 nedostaje `SERVICE_PROOF`, status **Čeka dopunu**.
+**Očekivano:** L2 `DEBT_COLLECTION`, nedostaje `SERVICE_PROOF`, status **Čeka dopunu**.
 
 ### Varijanta B — više nedostajućih (L4 INCOMPLETE)
 
-Isto kao A, ali **isključi** i Fakturu i Ugovor (sva tri obavezna nedostaju).
+Isto kao A, ali isključi i Fakturu i Ugovor.
 
-**Očekivano:** L4 dokumentacija **nepotpuna** (>2 nedostajuća), više zadataka `REQUEST_*`.
+**Očekivano:** L4 **nepotpuna** dokumentacija (>2 nedostajuća), više `REQUEST_*` zadataka.
 
 ### Pokrivena pravila
-L2 `Classify debt collection`, L3 template pravila za `DEBT_COLLECTION`, L4 `Documentation partial/incomplete`
+`Classify debt collection`, L3 template za `DEBT_COLLECTION`, L4 `Documentation partial/incomplete`
 
 ---
 
 ## 4. Naknada štete (L2 + L3)
-
-**Cilj:** Drugi tip predmeta — šteta.
-
-### Unos
 
 | Polje | Vrednost |
 |-------|----------|
@@ -145,166 +178,122 @@ L2 `Classify debt collection`, L3 template pravila za `DEBT_COLLECTION`, L4 `Doc
 | Stranka, kontakt, druga strana | popunjeno |
 | Indikatori | Šteta ✓ |
 | Datumi | Datum nastanka štete |
-| Dokumenti (šteta) | Zapisnik o šteti ✓, Dokaz o šteti ✗ |
-
-Klik **Sačuvaj i proceni**.
+| Dokumenti (šteta) | Zapisnik ✓, Dokaz o šteti ✗ |
 
 ### Očekivano
-
-| Oblast | Rezultat |
-|--------|----------|
-| L2 | `DAMAGES`, HIGH (zapisnik zadovoljava uslov klasifikacije) |
-| L3 | Nedostaje `DAMAGE_PROOF` → `REQUEST_DAMAGE_PROOF` |
-| DATES | *Proveriti datum štete* |
-| L5 | **Čeka dopunu** (nedostaje obavezni dokaz) |
-
-### Pokrivena pravila
-`Classify damages`, `damages missing damage_proof`, `Damage date needs check`
+- L2: `DAMAGES`, HIGH
+- L3: `REQUEST_DAMAGE_PROOF`, `CHECK_IF_DAMAGE_REPORT_EXISTS` (očekivani zapisnik već ✓ — provera se ne aktivira)
+- DATES: *Proveriti datum štete*
+- L5: **Čeka dopunu**
 
 ---
 
 ## 5. Imovinski predmet (L2 + L3)
-
-**Cilj:** Nepokretnost / katastar.
-
-### Unos
 
 | Polje | Vrednost |
 |-------|----------|
 | Naziv | Spor oko vlasništva |
 | Opis | Prekid uspostave granice |
 | Stranke | popunjeno |
-| Indikatori | Nepokretnost ✓ ili Katastarski podaci ✓ |
+| Indikatori | Nepokretnost ✓ ili Katastar ✓ |
 | Dokumenti (nepokretnost) | sve ✗ |
 
 ### Očekivano
+- L2: `PROPERTY`, HIGH
+- L3: `REQUEST_CADASTRE_EXTRACT`, `REQUEST_OWNERSHIP_DOCUMENT`
+- L4: **delimična** ili **nepotpuna** (2 obavezna)
 
-- L2: `PROPERTY`, HIGH  
-- L3: nedostaju `CADASTRE_EXTRACT` i `OWNERSHIP_DOCUMENT`  
-- L4: dokumentacija **delimična** ili **nepotpuna** (2 obavezna)  
-- Zadaci: `REQUEST_CADASTRE_EXTRACT`, `REQUEST_OWNERSHIP_DOCUMENT`
+### Javni organ (dodatno L3 pravilo)
+| Polje | Vrednost |
+|-------|----------|
+| Tip stranke (klijent) | **Javni organ** |
+| Dokumenti | bez `AUTHORIZATION_OR_DECISION` |
 
-### Napomena — javni organ
-Ako je **tip stranke = Javni organ**, dodatno se očekuje provera `AUTHORIZATION_OR_DECISION` → zadatak `CHECK_AUTHORIZATION_DOCUMENT` (očekivani dokument).
+**Očekivano:** zadatak `CHECK_AUTHORIZATION_DOCUMENT`
 
 ---
 
 ## 6. Nepoznat tip predmeta (L2)
 
-**Cilj:** Kada indikatori ne pokrivaju nijednu klasu.
-
-### Unos
-
 | Polje | Vrednost |
 |-------|----------|
-| Naziv, opis, stranke | minimalno popunjeno (L1 OK) |
-| Početni tip | Nepoznat |
+| Naziv, opis, stranke | minimalno (L1 OK) |
+| Početni tip | Automatska klasifikacija |
 | Indikatori | **svi isključeni** |
-| Dokumenti | prazno |
 
 ### Očekivano
-
-- L2: `UNKNOWN`, LOW  
-- Zadatak: **Ručna provera tipa predmeta** (`MANUAL_CASE_TYPE_REVIEW`)  
-- Status zavisi od dokumentacije; bez dokumenata često **Čeka dopunu** ili samo zadaci
-
-### Pokrivena pravila
-`Unknown case type`
+- L2: `UNKNOWN`, LOW
+- Zadatak: **Ručna provera tipa predmeta**
 
 ---
 
 ## 7. Klasifikacija iz početnog tipa (L2)
 
-**Cilj:** Pravilo sa salience 100 — ručno zadat tip ima prednost nad indikatorima.
-
-### Unos
-
 | Polje | Vrednost |
 |-------|----------|
 | Početni tip predmeta | **Naknada štete** |
 | Indikatori | Potraživanje ✓ (kontradiktorno) |
-| Ostalo | L1 popunjeno |
 
 ### Očekivano
+- L2: `DAMAGES` (iz dropdown-a, ne iz indikatora)
 
-- L2: `DAMAGES` (iz početnog tipa, ne `DEBT_COLLECTION` iz indikatora)
-
-### Pokrivena pravila
-`Classify from initial case type`
+Pravilo: `Classify from initial case type` (salience 100)
 
 ---
 
 ## 8. Proveriti datume (L5 + DATES)
 
-**Cilj:** Status `NEEDS_DATE_CHECK` kada nema jačih blokera.
-
-### Unos
-
-Kompletan predmet naplate **bez nedostajućih obaveznih dokumenata**:
+Kompletan predmet naplate **sa svim obaveznim dokumentima**:
 
 | Polje | Vrednost |
 |-------|----------|
 | Indikatori | Potraživanje ✓, Faktura ✓ |
-| Dokumenti (naplata) | Faktura ✓, Ugovor ✓, Dokaz o usluzi ✓ |
-| Dokumenti | Opomena ✓, Podaci o firmi ✓ (pravno lice) |
-| Datumi | **Datum dospelosti** popunjen; ostali prazni |
+| Dokumenti (naplata) | Faktura ✓, Ugovor ✓, Dokaz o usluzi ✓, Opomena ✓ |
+| Identitet | Podaci o registraciji firme ✓ |
+| Datumi | **Datum dospelosti**; ostali prazni |
 
 ### Očekivano
+- DATES: *Proveriti datum dospelosti*
+- L5: **Proveriti datume** (prioritet 4, jer nema L1/L3 blokera)
 
-- DATES: *Proveriti datum dospelosti*  
-- L5 kandidat: **Proveriti datume** (prioritet 4)  
-- **Status:** **Proveriti datume** — jer nema L1/L3 blokera  
-
-### Varijanta — više datuma
-Dodaj i **datum prijema odluke** i **datum štete** → tri VERIFY zadatka u **Predloženim akcijama**.
-
-### Pokrivena pravila
-`Due / Decision / Damage date needs check`, `Candidate needs date check`
+### Varijanta — tri datuma
+Dodaj datum dospelosti, datum štete i datum prijema odluke → tri VERIFY zadatka.
 
 ---
 
 ## 9. Spreman za pregled (L5)
 
-**Cilj:** Jedini „zeleni“ status — sve provere prošle.
-
-### Unos
+**Cilj:** Status **Spreman za pregled** — zahteva pažljivo popunjavanje.
 
 | Polje | Vrednost |
 |-------|----------|
 | Naziv, opis, stranke, kontakt | popunjeno |
 | Tip stranke | Pravno lice |
 | Indikatori | Potraživanje ✓, Faktura ✓, Ugovor ✓ |
-| Dokumenti (naplata) | Faktura ✓, Ugovor ✓, Dokaz o usluzi ✓, Opomena ✓ |
-| Identitet / firma | Podaci o registraciji firme ✓ |
+| Dokumenti (naplata) | sva četiri ✓ (uključujući opomena) |
+| Identitet | Podaci o registraciji firme ✓ |
 | Datumi | **prazno** (datumi otvaraju VERIFY zadatke koji blokiraju spremnost) |
 
 ### Očekivano
+- L4: dokumentacija **kompletna**
+- L5: **Spreman za pregled**
+- Nema otvorenih zadataka
 
-- L1: osnovni podaci kompletni  
-- L4: dokumentacija **kompletna**  
-- L5: status **Spreman za pregled**  
-- Nema otvorenih zadataka u pregledu  
-
-### Šta reći asistentu
-> Predmet može na inicijalni pregled pravnika; sistem i dalje ne zamenjuje stručnu procenu.
+> Datumi i očekivani dokumenti generišu otvorene zadatke — zato ih za ovaj scenarij ostavi prazne / označene.
 
 ---
 
 ## 10. Prioritet statusa (L5)
 
-**Cilj:** Objasniti zašto jedan predmet ima više kandidata, a jedan status pobedi.
-
 ### Priprema
-Koristi **Demo** predmet (čeka dokument + datum za proveru).
+Koristi **Demo** predmet.
 
 ### Koraci
-1. Otvori **Detalji rezonovanja → Kandidati za status (L5)**  
-2. Uoči više kandidata (npr. čeka dopunu p2, proveriti datume p4)  
-3. Objasni: niži broj prioriteta = jači signal → **Čeka dopunu** pobedi  
-4. **+7 dana** → **Ponovi procenu**  
-5. Kandidat **Zahteva pažnju** (p3) preuzima status zbog CEP alarma  
-
-### Tabela prioriteta (za referencu)
+1. **Detalji rezonovanja → Kandidati za status**
+2. Uoči više kandidata (npr. čeka dopunu p2, proveriti datume p4)
+3. Objasni: **niži broj prioriteta = jači signal**
+4. **+7 dana** → **Ponovi procenu**
+5. Kandidat **Zahteva pažnju** (p3) preuzima zbog CEP alarma
 
 | Prioritet | Status |
 |-----------|--------|
@@ -319,167 +308,173 @@ Koristi **Demo** predmet (čeka dokument + datum za proveru).
 
 ## 11. Opterećenje kancelarije (L4)
 
-**Cilj:** Zbirna pravila — upozorenje na nivo kancelarije.
-
-**Prag:** `office.load.waitingThreshold=2` (min. 2 predmeta u statusu čekanja).
+**Prag:** min. **2 predmeta** u istom statusu (`office.load.*Threshold=2`).
 
 ### Koraci
-1. Klik **Demo** (predmet 1 — čeka dopunu)  
-2. **Novi** → napravi predmet 2 isto kao varijanta A u [scenariju 3](#3-naplata-potraživanja-l2--l3) (nedostaje dokaz o usluzi)  
-3. **Ponovi procenu** na bilo kom od njih  
+1. **Demo** (predmet 1 — čeka dopunu)
+2. **Novi** → predmet 2 kao [scenarij 3A](#3-naplata-potraživanja-l2--l3)
+3. **Ponovi procenu** na bilo kom
 
 ### Očekivano
+- **Opterećenje kancelarije (L4)** — mnogo predmeta čeka dokumentaciju
 
-- U rezultatima: **Opterećenje kancelarije (L4)** — mnogo predmeta čeka dokumentaciju  
-
-### Varijanta — spremni predmeti
-Napravi **2× scenarij 9** (spreman za pregled). Prag `office.load.readyThreshold=2` → upozorenje *mnogo spremnih predmeta*.
-
-### Pokrivena pravila
-`Many cases waiting for client`, `Many ready cases`
+### Varijanta
+Napravi **2× scenarij 9** → upozorenje *mnogo spremnih predmeta*.
 
 ---
 
 ## 12. CEP — dokument nije dodat
 
-**Cilj:** Vremensko praćenje zahteva za dokument.
-
-### Koraci
-1. **Demo**  
-2. Proveri da postoji zadatak *Zatražiti dokaz o usluzi* i nedostaje `SERVICE_PROOF`  
-3. CEP → **+7 dana**  
+1. **Demo**
+2. Proveri zadatak *Zatražiti dokaz o usluzi*
+3. CEP → **+7 dana**
 4. **Ponovi procenu**
 
 ### Očekivano
-
-- CEP alarm: **Dokument nije dodat u roku**  
-- Zadatak: `CHECK_DOCUMENT_REQUEST_STATUS`  
+- Alarm: **Dokument nije dodat u roku**
 - Status: **Zahteva pažnju**
 
-### Uslov pravila
-`TaskCreatedEvent` za dokument + ≥7 dana + dokument i dalje nedostaje.
+Uslov: `TaskCreatedEvent` + ≥7 dana + dokument i dalje nedostaje.
 
 ---
 
 ## 13. CEP — predmet čeka predugo
 
-**Cilj:** Dugotrajno čekanje dopune od stranke.
-
-### Koraci
-1. **Demo** (status čeka dopunu)  
-2. CEP → **+14 dana**  
+1. **Demo** (status čeka dopunu)
+2. CEP → **+14 dana**
 3. **Ponovi procenu** (bez izmene predmeta)
 
 ### Očekivano
-
-- CEP alarm: **Predmet predugo čeka klijenta**  
-- Zadatak: `CHECK_CASE_STATUS`  
-- Status: **Zahteva pažnju**
-
-### Napomena
-Pravilo gleda da nema `CaseUpdatedEvent` / `DocumentAddedEvent` u poslednjih 14 dana (simulacionog vremena).
+- Alarm: **Predmet predugo čeka klijenta**
+- Zadatak: `CHECK_CASE_STATUS`
 
 ---
 
 ## 14. CEP — spreman, nije pregledan
 
-**Cilj:** Predmet spreman ali zastareo bez pregleda pravnika.
-
 ### Priprema
-Kreiraj predmet po [scenariju 9](#9-spreman-za-pregled-l5) — status **Spreman za pregled**.
+Kreiraj predmet po [scenariju 9](#9-spreman-za-pregled-l5).
 
 ### Koraci
-1. CEP → **+7 dana**  
-2. **Ponovi procenu** (ne menjaj predmet)
+1. CEP → **+7 dana**
+2. **Ponovi procenu**
 
 ### Očekivano
-
-- CEP alarm: **Spreman predmet nije pregledan**  
-- Zadatak: **Dodeliti pregled pravniku** (`ASSIGN_REVIEW`)
+- Alarm: **Spreman predmet nije pregledan**
+- Zadatak: **Dodeliti pregled pravniku**
 
 ---
 
 ## 15. CEP — stara neaktivnost
 
-**Cilj:** Prag neaktivnosti (`case.inactivity.days=30`).
-
-### Koraci
-1. Bilo koji sačuvan predmet (npr. Demo)  
-2. CEP → **+30 dana**  
+1. Bilo koji sačuvan predmet (npr. Demo)
+2. CEP → **+30 dana**
 3. **Ponovi procenu**
 
 ### Očekivano
+- **Neaktivnost predmeta** (npr. 30 dana)
+- L5 kandidat: **Zahteva pažnju**
 
-- Blok **Neaktivnost predmeta** (npr. 30 dana)  
-- Zadatak: `CHECK_CASE_STATUS`  
-- L5 kandidat: **Zahteva pažnju** (preko `CaseInactive`)
-
-### Pokrivena pravila
-`Old case activity`, `Candidate needs attention from inactivity`
+Pravilo: `Old case activity` (gleda `lastUpdatedAt` i 30d prozor bez događaja).
 
 ---
 
 ## 16. Arhiviran predmet
 
-**Cilj:** Status arhive isključuje predmet iz aktivne obrade.
-
-### Koraci
-1. Učitaj bilo koji predmet (iz liste levo)  
-2. U formi: **Status predmeta → Arhiviran** ✓  
+1. Učitaj predmet iz liste levo
+2. Forma → **Arhiviran** ✓
 3. **Sačuvaj izmene**
 
 ### Očekivano
-
-- Status: **Arhiviran** (prioritet 6 u kandidatima)  
-- Predmet se ne tretira kao spreman za dalju automatsku procenu
-
-### Pokrivena pravila
-`Candidate archived`
+- Status: **Arhiviran** (prioritet 6)
 
 ---
 
 ## 17. Transparentnost (audit + pravila)
 
-**Cilj:** Objašnjivost odluka — zaštita od „crne kutije“.
+1. Posle bilo koje procene → **Transparentnost (pravila i audit)**
+2. **Aktivirana pravila** — imena DRL pravila (L3 template imena su npr. `DEBT_COLLECTION_missing_CONTRACT_2`)
+3. **Audit log** — promene statusa, zadaci
+4. Uporedi sa **Katalogom pravila**
+
+---
+
+## 18. Backward chaining — spreman za pregled?
+
+**Cilj:** BC upit `isCaseReadyForInitialReview`.
 
 ### Koraci
-1. Posle bilo koje procene otvori **Transparentnost (pravila i audit)**  
-2. Pregled **Aktiviranih pravila** — imena DRL pravila  
-3. Pregled **Audit loga** — promene statusa, zadaci, pravila  
-4. Uporedi sa **Katalogom pravila** u zaglavlju  
+1. **Demo** predmet (nije spreman)
+2. Skroluj do **Backward chaining** panela
+3. Klik **Spreman za inicijalni pregled?**
 
-### Šta reći asistentu
-> Svaka odluka je traga u audit logu; asistent vidi koja su se pravila aktivirala i zašto je predložen zadatak.
+### Očekivano (Demo)
+- Odgovor: **ne** (`satisfied: false`)
+- Podciljevi: osnovni podaci ✓, klasifikacija ✓, nedostaju obavezni dokumenti ✗, otvoreni zadaci ✗
 
----
-
-## Brza mapa pravila → scenarij
-
-| Grupa pravila | Scenarij |
-|---------------|----------|
-| L1 validacija | 2 |
-| L2 klasifikacija (debt / damages / property / unknown / initial) | 1, 3, 4, 5, 6, 7 |
-| L3 checklist (11 template pravila) | 1, 3, 4, 5 |
-| L4 accumulate (dokumentacija + opterećenje) | 1, 3, 5, 11 |
-| L5 status | 1–11, 16 |
-| DATES | 1, 4, 8 |
-| CEP (4 pravila) | 1, 12, 13, 14, 15 |
-| Audit / transparentnost | 17 |
+### Varijanta — spreman predmet
+Nakon [scenarija 9](#9-spreman-za-pregled-l5) → isti upit → **da**.
 
 ---
 
-## Rešavanje problema pri demo-u
+## 19. Backward chaining — glavna pravna radnja
+
+**Cilj:** Rekurzivni BC upit + forward pravila `Main legal action blocked/reachable`.
+
+### Koraci (Demo predmet)
+1. U pregledu rezultata: **Glavna pravna radnja → Podnošenje tužbe — blokirana**
+2. BC panel → **Da li je moguća glavna pravna radnja?**
+
+### Očekivano
+- Odgovor: **ne**
+- Podciljevi po lancu: utvrđivanje osnova, slanje opomene, podnošenje tužbe
+- Blokeri: nedostaje **opomena pre tužbe** (i eventualno drugi dokumenti)
+
+### Varijanta — deblokiranje
+U formi označi **Opomena pre tužbe** ✓ + sve obavezne dokumente → **Sačuvaj izmene** → BC upit → lanac se zatvara ka „moguća".
+
+Graf preduslova (naplata):
+```
+PODNOŠENJE TUŽBE ⇐ opomena
+                 ⇐ SLANJE OPOMENE
+                      ⇐ UTVRĐIVANJE OSNOVA ⇐ ugovor + faktura
+```
+
+---
+
+## Mapa pravila → scenarij
+
+| Grupa | Broj pravila | Scenarij |
+|-------|--------------|----------|
+| L1 validacija | 5 | 2 |
+| L2 klasifikacija | 5 | 1, 3–7 |
+| L3 checklist (template) | 11 | 1, 3–5 |
+| L4 accumulate | 5 | 1, 3, 5, 11 |
+| L5 status | 8 | 1–11, 16 |
+| DATES | 3 | 1, 4, 8 |
+| CEP | 4 | 1, 12–15 |
+| Procedure (forward + BC) | 2 + upiti | 1, 18, 19 |
+| Audit | — | 17 |
+
+---
+
+## Šta se ne može demonstrirati kroz pravila
+
+Ova polja postoje u formi, ali **nemaju pravila** u engine-u:
+
+- `claimAmount` (iznos potraživanja) — samo se čuva
+- datumi: `OBLIGATION_DATE`, `LAST_ACTION_DATE`, `OPENED_DATE`
+- dokumenti: `ID_CARD`, `REGISTRATION_EXTRACT`, `OTHER` (van L3 checkliste)
+
+---
+
+## Rešavanje problema
 
 | Problem | Rešenje |
 |---------|---------|
 | CEP alarm se ne pojavi posle +7 | Klikni **Ponovi procenu** posle pomeranja sata |
-| Status ostaje „Čeka dopunu“ posle CEP | Očekivano dok CEP alarm nije jači (p3); posle +7 treba „Zahteva pažnju“ |
-| Ne mogu „Spreman za pregled“ | Proveri sve obavezne **i** očekivane dokumente; **ne unosi datume** (otvaraju VERIFY zadatke) |
-| L4 opterećenje se ne vidi | Potrebna su **2 predmeta** u istom statusu (čekanje ili spreman) |
-| Backend greška | Restart: `docker compose up -d` + `./mvnw spring-boot:run` ([RUN.md](RUN.md)) |
-
----
-
-## Napomena o backward chainingu
-
-BC upiti (`isCaseReadyForInitialReview`, rekurzivni `isCaseProcessable`) trenutno **nisu u frontendu** — Drools ne izvršava rekurzivne DRL upite. Za demonstraciju koristi L5 status i blok **Predložene akcije** kao ekvivalent „da li je predmet spreman“.
+| Status ostaje „Čeka dopunu" posle CEP | Posle +7 treba „Zahteva pažnju" (p3); proveri da nisi ažurirao predmet u međuvremenu |
+| Ne mogu „Spreman za pregled" | Svi obavezni **i** očekivani dokumenti ✓; **bez datuma** |
+| L4 opterećenje se ne vidi | Potrebna su **2 predmeta** u istom statusu |
+| BC panel prazan | Prvo izaberi predmet iz liste levo |
+| Backend greška | `docker compose up -d` + `./mvnw spring-boot:run` u `back-end/` |

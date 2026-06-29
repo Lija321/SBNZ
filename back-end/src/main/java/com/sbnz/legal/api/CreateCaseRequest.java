@@ -6,6 +6,7 @@ import com.sbnz.legal.domain.Party;
 import com.sbnz.legal.domain.enums.CaseType;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,5 +30,6 @@ public class CreateCaseRequest {
         private boolean hasRealEstate;
         private boolean hasCadastreData;
         private boolean hasOfficialAct;
+        private BigDecimal claimAmount;
     }
 }

@@ -55,6 +55,17 @@
     <label><input type="checkbox" [(ngModel)]="hasRealEstate" name="re" /> Nepokretnost</label>
     <label><input type="checkbox" [(ngModel)]="hasCadastreData" name="cad" /> Katastarski podaci</label>
     <label><input type="checkbox" [(ngModel)]="hasOfficialAct" name="act" /> Odluka / akt organa</label>
+    <div class="field">
+      <label for="claimAmount">Iznos potraživanja (RSD, opciono)</label>
+      <input
+        id="claimAmount"
+        name="claimAmount"
+        type="number"
+        min="0"
+        step="1"
+        [(ngModel)]="claimAmount"
+      />
+    </div>
   </fieldset>
 
   <fieldset class="checks">
@@ -70,6 +81,18 @@
     <div class="field">
       <label for="decisionDate">Datum prijema odluke / akta</label>
       <input id="decisionDate" name="decisionReceivedDate" type="date" [(ngModel)]="decisionReceivedDate" />
+    </div>
+    <div class="field">
+      <label for="obligationDate">Datum nastanka obaveze</label>
+      <input id="obligationDate" name="obligationDate" type="date" [(ngModel)]="obligationDate" />
+    </div>
+    <div class="field">
+      <label for="lastActionDate">Datum poslednje radnje</label>
+      <input id="lastActionDate" name="lastActionDate" type="date" [(ngModel)]="lastActionDate" />
+    </div>
+    <div class="field">
+      <label for="openedDate">Datum otvaranja predmeta</label>
+      <input id="openedDate" name="openedDate" type="date" [(ngModel)]="openedDate" />
     </div>
   </fieldset>
 
@@ -106,6 +129,16 @@
   <fieldset class="checks">
     <legend>Identitet stranke</legend>
     @for (doc of identityDocuments; track doc.type) {
+      <label>
+        <input type="checkbox" [name]="doc.type" [(ngModel)]="documentPresent[doc.type]" />
+        {{ doc.label }}
+      </label>
+    }
+  </fieldset>
+
+  <fieldset class="checks">
+    <legend>Ostala dokumentacija</legend>
+    @for (doc of otherDocuments; track doc.type) {
       <label>
         <input type="checkbox" [name]="doc.type" [(ngModel)]="documentPresent[doc.type]" />
         {{ doc.label }}

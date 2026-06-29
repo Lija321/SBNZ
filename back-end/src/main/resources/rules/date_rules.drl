@@ -6,6 +6,8 @@ import com.sbnz.legal.domain.SuggestedTask;
 import com.sbnz.legal.domain.enums.DateType;
 import com.sbnz.legal.domain.enums.TaskType;
 
+import java.time.Instant;
+
 dialect "java"
 
 rule "Due date needs check"
@@ -14,8 +16,9 @@ when
     $d : DateFact($id : caseId, dateType == DateType.DUE_DATE)
     not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DUE_DATE)
 then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
     insert(new ImportantDateNeedsCheck($id, DateType.DUE_DATE));
-    insert(new SuggestedTask($id, TaskType.VERIFY_DUE_DATE));
+    insert(new SuggestedTask($id, TaskType.VERIFY_DUE_DATE, true, now));
 end
 
 rule "Decision date needs check"
@@ -24,8 +27,9 @@ when
     $d : DateFact($id : caseId, dateType == DateType.DECISION_RECEIVED_DATE)
     not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DECISION_RECEIVED_DATE)
 then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
     insert(new ImportantDateNeedsCheck($id, DateType.DECISION_RECEIVED_DATE));
-    insert(new SuggestedTask($id, TaskType.VERIFY_DATE_RELEVANCE));
+    insert(new SuggestedTask($id, TaskType.VERIFY_DATE_RELEVANCE, true, now));
 end
 
 rule "Damage date needs check"
@@ -34,6 +38,7 @@ when
     $d : DateFact($id : caseId, dateType == DateType.DAMAGE_DATE)
     not ImportantDateNeedsCheck(caseId == $id, dateType == DateType.DAMAGE_DATE)
 then
-    insert(new SuggestedTask($id, TaskType.VERIFY_DAMAGE_DATE));
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
+    insert(new SuggestedTask($id, TaskType.VERIFY_DAMAGE_DATE, true, now));
     insert(new ImportantDateNeedsCheck($id, DateType.DAMAGE_DATE));
 end

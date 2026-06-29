@@ -12,6 +12,8 @@ import com.sbnz.legal.domain.enums.DocumentType;
 import com.sbnz.legal.domain.enums.DateType;
 import com.sbnz.legal.domain.enums.TaskType;
 
+import java.time.Instant;
+
 dialect "java"
 
 rule "Classify from initial case type"
@@ -70,6 +72,7 @@ when
     not CaseClassification(caseId == $id)
     not SuggestedTask(caseId == $id, taskType == TaskType.MANUAL_CASE_TYPE_REVIEW)
 then
+    Instant now = Instant.ofEpochMilli(kcontext.getKieRuntime().getSessionClock().getCurrentTime());
     insert(new CaseClassification($id, CaseType.UNKNOWN, ClassificationConfidence.LOW));
-    insert(new SuggestedTask($id, TaskType.MANUAL_CASE_TYPE_REVIEW));
+    insert(new SuggestedTask($id, TaskType.MANUAL_CASE_TYPE_REVIEW, true, now));
 end

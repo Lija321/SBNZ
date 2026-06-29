@@ -223,6 +223,7 @@ export interface CreateCaseRequest {
     hasRealEstate: boolean;
     hasCadastreData: boolean;
     hasOfficialAct: boolean;
+    claimAmount?: number | null;
   };
 }
 

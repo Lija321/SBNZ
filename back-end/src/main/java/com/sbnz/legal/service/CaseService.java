@@ -197,7 +197,6 @@ public class CaseService {
         );
         entity.setLastStatus(report.getSummary().getStatus());
         entity.setLastEvaluatedAt(report.getEvaluatedAt());
-        entity.setLastUpdatedAt(report.getEvaluatedAt());
         entity.setLastOpenTasks(report.getSuggestedTasks().stream()
                 .filter(SuggestedTask::isOpen)
                 .map(SuggestedTask::getTaskType)

@@ -126,6 +126,7 @@ public class CasePersistenceMapper {
             indicator.setHasRealEstate(in.isHasRealEstate());
             indicator.setHasCadastreData(in.isHasCadastreData());
             indicator.setHasOfficialAct(in.isHasOfficialAct());
+            indicator.setClaimAmount(in.getClaimAmount());
             entity.setIndicator(indicator);
         }
 
@@ -193,6 +194,7 @@ public class CasePersistenceMapper {
             indicator.setHasRealEstate(in.isHasRealEstate());
             indicator.setHasCadastreData(in.isHasCadastreData());
             indicator.setHasOfficialAct(in.isHasOfficialAct());
+            indicator.setClaimAmount(in.getClaimAmount());
         } else {
             entity.setIndicator(null);
         }
@@ -238,6 +240,7 @@ public class CasePersistenceMapper {
             ind.setHasRealEstate(in.isHasRealEstate());
             ind.setHasCadastreData(in.isHasCadastreData());
             ind.setHasOfficialAct(in.isHasOfficialAct());
+            ind.setClaimAmount(in.getClaimAmount());
             req.setIndicators(ind);
         }
         return req;
